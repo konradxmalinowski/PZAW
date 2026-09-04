@@ -43,36 +43,13 @@ Node.js nie jest językiem programowania. **Językiem jest JavaScript, a Node.js
 
 ---
 
-# 2. Node.js a JavaScript w przeglądarce
+## 2. Node.js a JavaScript w przeglądarce
 
-Ten sam język może być wykonywany w dwóch różnych środowiskach.
+Ten sam język może być wykonywany w dwóch różnych środowiskach, ale mają one dostęp do zupełnie innych rzeczy.
 
-### JavaScript w przeglądarce
+W przeglądarce JavaScript ma dostęp do obiektów związanych ze stroną i użytkownikiem, takich jak `document`, `window`, `localStorage` czy `fetch()`. Dzięki temu może np. zmieniać treść strony po kliknięciu przycisku.
 
-Ma dostęp m.in. do:
-
-```javascript
-document
-window
-localStorage
-fetch()
-```
-
-Możemy więc manipulować stroną:
-
-```javascript
-document.querySelector("h1").textContent = "Hello";
-```
-
-### JavaScript w Node.js
-
-Node.js nie posiada DOM-u przeglądarki, ale daje dostęp do funkcji potrzebnych na serwerze:
-
-```javascript
-console.log("Hello");
-```
-
-Możemy korzystać np. z:
+W Node.js nie istnieje `document` ani `window`, bo nie ma tam żadnej strony do wyświetlenia. Zamiast tego Node.js udostępnia moduły przydatne na serwerze:
 
 ```text
 fs          - system plików
@@ -83,19 +60,20 @@ crypto      - operacje kryptograficzne
 process     - informacje o procesie
 ```
 
-Przykład:
+Za pomocą modułu `fs` można na przykład zapisać plik na dysku - coś, co w przeglądarce ze względów bezpieczeństwa jest niemożliwe.
 
-```javascript
-const fs = require("fs");
+| JavaScript w przeglądarce | JavaScript w Node.js |
+|---|---|
+| ma dostęp do `document`, `window` | nie ma dostępu do DOM-u |
+| działa w kontekście jednej strony | działa jako samodzielny program |
+| ograniczony dostęp do systemu plików | pełny dostęp do plików, sieci, systemu |
+| uruchamiany przez przeglądarkę | uruchamiany poleceniem `node` |
 
-fs.writeFileSync("test.txt", "Hello Node.js!");
-```
-
-Kod utworzy plik `test.txt`.
+Praktyczny przykład zapisu pliku znajdziesz w sekcji z kodem, przykład 3.
 
 ---
 
-# 3. Skąd Node.js bierze swoją szybkość?
+## 3. Skąd Node.js bierze swoją szybkość?
 
 Node.js wykorzystuje silnik JavaScript **V8**, rozwijany przez Google i używany również w przeglądarce Chrome.
 
@@ -111,53 +89,15 @@ silnik V8
 wykonywanie JavaScript
 ```
 
-Sam V8 nie jest jednak całym Node.js.
-
-Node.js dodaje do silnika JavaScript własne API i mechanizmy potrzebne do pracy z systemem operacyjnym, siecią, plikami itd.
+Sam V8 nie jest jednak całym Node.js. Node.js dodaje do silnika JavaScript własne API i mechanizmy potrzebne do pracy z systemem operacyjnym, siecią, plikami itd.
 
 ---
 
-# 4. Serwer w JavaScript
+## 4. Jak działa serwer napisany w Node.js?
 
-Najprostszy serwer HTTP można uruchomić bez Expressa, korzystając z modułu `http`.
+Node.js pozwala napisać serwer HTTP obsługujący żądania od klientów, korzystając z wbudowanego modułu `http`.
 
-Plik:
-
-```text
-server.js
-```
-
-Kod:
-
-```javascript
-const http = require("http");
-
-const server = http.createServer((req, res) => {
-    res.writeHead(200, {
-        "Content-Type": "text/plain"
-    });
-
-    res.end("Hello World!");
-});
-
-server.listen(3000, () => {
-    console.log("Serwer działa na http://localhost:3000");
-});
-```
-
-Uruchomienie:
-
-```bash
-node server.js
-```
-
-Następnie otwieramy:
-
-```text
-http://localhost:3000
-```
-
-Przeglądarka wysyła żądanie HTTP, a Node.js odpowiada.
+Przeglądarka (albo dowolny inny klient) wysyła żądanie HTTP pod konkretny adres, a Node.js odbiera je, przetwarza i odsyła odpowiedź:
 
 ```text
 Przeglądarka
@@ -172,51 +112,31 @@ Node.js
 Przeglądarka
 ```
 
-To jest podstawowa idea backendu.
+To jest podstawowa idea backendu - program działający cały czas, nasłuchujący na określonym porcie i odpowiadający na przychodzące żądania. Pełny przykład takiego serwera znajduje się w sekcji z kodem, przykład 9.
 
 ---
 
-# 5. Co oznacza Event Loop?
+## 5. Co oznacza Event Loop?
 
 Jednym z najważniejszych elementów Node.js jest **Event Loop**, czyli pętla zdarzeń.
 
-Node.js został zaprojektowany tak, aby dobrze radzić sobie z dużą liczbą operacji wejścia/wyjścia, np.:
+Node.js został zaprojektowany tak, aby dobrze radzić sobie z dużą liczbą operacji wejścia/wyjścia (I/O), np.:
 
 * żądaniami HTTP,
 * odczytem plików,
 * zapytaniami do bazy danych,
 * komunikacją sieciową.
 
-Zamiast blokować wykonywanie programu podczas oczekiwania na takie operacje, Node.js może rozpocząć operację i zająć się innymi zadaniami.
+Zamiast blokować wykonywanie programu podczas oczekiwania na taką operację, Node.js może ją rozpocząć i w międzyczasie zająć się innymi zadaniami. Gdy operacja się zakończy, Event Loop zadba o to, żeby uruchomić kod, który na nią czekał.
 
-Przykład:
-
-```javascript
-console.log("1");
-
-setTimeout(() => {
-    console.log("2");
-}, 1000);
-
-console.log("3");
-```
-
-Wynik:
-
-```text
-1
-3
-2
-```
-
-Dlaczego?
+Uproszczony przebieg wygląda tak:
 
 ```text
 console.log("1")
        ↓
 setTimeout()
        ↓
-ustawienie zadania
+ustawienie zadania na później
        ↓
 console.log("3")
        ↓
@@ -227,65 +147,23 @@ po około 1 sekundzie
 console.log("2")
 ```
 
-Node.js nie zatrzymuje całego programu na sekundę.
+Node.js nie zatrzymuje całego programu na czas oczekiwania - dalszy kod wykonuje się od razu, a zadanie oczekujące dołącza dopiero wtedy, gdy jest gotowe. Konkretny przykład kodu do tego mechanizmu znajduje się w sekcji z kodem, przykład 4.
 
 ---
 
-# 6. Kod synchroniczny i asynchroniczny
+## 6. Kod synchroniczny i asynchroniczny
 
-### Synchronicznie
+**Kod synchroniczny** wykonuje się linia po linii - każda kolejna instrukcja czeka, aż poprzednia się zakończy.
 
-Instrukcje wykonywane są jedna po drugiej.
+**Kod asynchroniczny** pozwala rozpocząć operację (np. odczyt pliku) i nie czekać na jej zakończenie, żeby wykonywać dalszy kod. Wynik takiej operacji dostajemy później, zwykle w funkcji zwrotnej (**callback**) albo przez `Promise`.
 
-```javascript
-console.log("A");
-console.log("B");
-console.log("C");
-```
-
-Wynik:
-
-```text
-A
-B
-C
-```
-
-### Asynchronicznie
-
-Rozpoczynamy operację, ale nie musimy czekać na jej zakończenie, żeby wykonywać dalszy kod.
-
-Przykład:
-
-```javascript
-const fs = require("fs");
-
-fs.readFile("plik.txt", "utf8", (err, data) => {
-    if (err) {
-        console.error(err);
-        return;
-    }
-
-    console.log(data);
-});
-
-console.log("Koniec");
-```
-
-Możemy otrzymać:
-
-```text
-Koniec
-zawartość pliku
-```
-
-Node.js rozpoczął odczytywanie pliku, ale nie musiał czekać na jego zakończenie.
+W Node.js większość operacji I/O - odczyt plików, zapytania sieciowe, zapytania do bazy danych - jest asynchroniczna. To jedna z podstawowych cech tego środowiska. Przykłady obu podejść znajdziesz w sekcji z kodem, przykłady 5 i 6.
 
 ---
 
-# 7. Event Loop - uproszczony model
+## 7. Event Loop - uproszczony model
 
-Można wyobrazić go sobie tak:
+Mechanizm obsługi operacji asynchronicznych można wyobrazić sobie tak:
 
 ```text
              ┌─────────────────┐
@@ -309,27 +187,15 @@ Można wyobrazić go sobie tak:
              kod JavaScript
 ```
 
-Przykładowo:
-
-```javascript
-fs.readFile("data.txt", callback);
-```
-
-Node.js zleca odczyt pliku, a następnie może wykonywać kolejne instrukcje.
-
-Gdy odczyt się zakończy, funkcja `callback` zostanie wykonana.
+Node.js zleca np. odczyt pliku, a następnie może wykonywać kolejne instrukcje. Gdy odczyt się zakończy, funkcja `callback` przekazana do tej operacji zostanie wykonana - Event Loop dba o to, żeby trafiła z powrotem do kolejki wykonania.
 
 ---
 
-# 8. Czy Node.js jest wielowątkowy?
+## 8. Czy Node.js jest wielowątkowy?
 
 W tym miejscu łatwo o nieporozumienie.
 
-Kod JavaScript aplikacji Node.js jest zasadniczo wykonywany przez **pojedynczy główny wątek**.
-
-Nie oznacza to jednak, że cały Node.js jest ograniczony do jednego wątku.
-
-Node.js korzysta również z mechanizmów systemowych i puli wątków, m.in. poprzez bibliotekę **libuv**.
+Kod JavaScript aplikacji Node.js jest zasadniczo wykonywany przez **pojedynczy główny wątek**. Nie oznacza to jednak, że cały Node.js jest ograniczony do jednego wątku - korzysta on również z mechanizmów systemowych i puli wątków, m.in. poprzez bibliotekę **libuv**.
 
 Najważniejsza rzecz do zapamiętania:
 
@@ -347,34 +213,11 @@ API
 
 ---
 
-# 9. Dlaczego nie należy blokować Event Loop?
+## 9. Dlaczego nie należy blokować Event Loop?
 
-Jeżeli wykonamy bardzo ciężką operację synchroniczną, główny wątek może zostać zajęty.
+Jeżeli wykonamy bardzo ciężką operację synchroniczną, główny wątek zostaje zajęty i przez ten czas Node.js nie może obsługiwać żadnych innych zadań - w tym nowych żądań HTTP.
 
-Na przykład:
-
-```javascript
-while (true) {
-}
-```
-
-Program utknie w nieskończonej pętli.
-
-Nie będzie mógł normalnie obsługiwać kolejnych żądań.
-
-Podobny problem może wystąpić przy bardzo ciężkich obliczeniach wykonywanych synchronicznie.
-
-Przykład:
-
-```javascript
-function veryHeavyCalculation() {
-    // bardzo dużo obliczeń
-}
-
-veryHeavyCalculation();
-```
-
-Jeżeli obliczenia trwają kilka sekund, przez ten czas Event Loop nie może normalnie wykonywać kolejnych zadań JavaScript.
+Dotyczy to zarówno nieskończonych pętli, jak i zwykłych, ale bardzo czasochłonnych obliczeń wykonywanych synchronicznie (przykłady w sekcji z kodem, przykład 7).
 
 W aplikacjach serwerowych trzeba więc uważać na:
 
@@ -387,49 +230,19 @@ blokujące API
 
 ---
 
-# 10. Instalacja Node.js
+## 10. Instalacja Node.js i sprawdzanie wersji
 
-Po zainstalowaniu Node.js powinniśmy mieć dostęp do dwóch podstawowych poleceń:
+Po zainstalowaniu Node.js mamy dostęp do dwóch podstawowych poleceń w terminalu: `node` oraz `npm`.
 
-```bash
-node
-```
+Wersję zainstalowanego Node.js sprawdzamy poleceniem `node --version` (lub krócej `node -v`). Analogicznie wersję npm sprawdza się poleceniem `npm -v`. Dokładny zapis tych poleceń znajduje się w sekcji z kodem, przykład 1.
 
-oraz:
-
-```bash
-npm
-```
-
-Sprawdzenie wersji Node.js:
-
-```bash
-node --version
-```
-
-lub:
-
-```bash
-node -v
-```
-
-Przykładowy wynik:
-
-```text
-v22.18.0
-```
-
-Sprawdzenie npm:
-
-```bash
-npm -v
-```
+Warto sprawdzać wersję Node.js przy starcie każdego nowego projektu - niektóre biblioteki wymagają konkretnej, minimalnej wersji.
 
 ---
 
-# 11. Czym jest npm?
+## 11. Czym jest npm?
 
-**npm** oznacza **Node Package Manager**.
+**npm** oznacza **Node Package Manager**, czyli menedżer pakietów dla Node.js.
 
 Jest to narzędzie służące m.in. do:
 
@@ -439,180 +252,58 @@ Jest to narzędzie służące m.in. do:
 * uruchamiania skryptów,
 * publikowania pakietów.
 
-Przykładowo chcemy zainstalować Express:
-
-```bash
-npm install express
-```
-
-npm pobierze bibliotekę i zapisze ją jako zależność projektu.
+**Zależność** (ang. *dependency*) to biblioteka, z której korzysta nasz projekt i którą trzeba zainstalować, zanim kod zacznie działać. npm pobiera taką bibliotekę z internetu i zapisuje ją jako część projektu.
 
 ---
 
-# 12. Inicjalizacja projektu
+## 12. Inicjalizacja projektu
 
-Najpierw tworzymy katalog:
+Zanim zaczniemy pisać kod, tworzymy katalog projektu i inicjalizujemy go poleceniem npm. Podczas inicjalizacji npm zadaje kilka pytań dotyczących projektu (nazwa, wersja, opis) albo - jeśli użyjemy flagi automatycznie akceptującej wartości domyślne - pomija te pytania i od razu tworzy plik konfiguracyjny.
 
-```bash
-mkdir moja-aplikacja
-```
-
-Przechodzimy do niego:
-
-```bash
-cd moja-aplikacja
-```
-
-Następnie:
-
-```bash
-npm init
-```
-
-npm zada nam kilka pytań dotyczących projektu.
-
-Możemy też użyć:
-
-```bash
-npm init -y
-```
-
-Opcja `-y` automatycznie akceptuje domyślne wartości.
-
-Po wykonaniu polecenia powstanie:
+Efektem inicjalizacji jest zawsze ten sam plik:
 
 ```text
 moja-aplikacja/
 └── package.json
 ```
 
----
-
-# 13. Plik package.json
-
-`package.json` jest jednym z najważniejszych plików projektu Node.js.
-
-Przechowuje informacje o projekcie, m.in.:
-
-* nazwę,
-* wersję,
-* opis,
-* punkt wejścia,
-* skrypty,
-* zależności.
-
-Przykład:
-
-```json
-{
-    "name": "moja-aplikacja",
-    "version": "1.0.0",
-    "description": "Moja pierwsza aplikacja Node.js",
-    "main": "server.js",
-    "scripts": {
-        "start": "node server.js"
-    },
-    "dependencies": {}
-}
-```
+Dokładne polecenia do wykonania tego kroku znajdziesz w sekcji z kodem, przykład 8.
 
 ---
 
-# 14. Najważniejsze pola package.json
+## 13. Plik package.json
 
-## name
+`package.json` jest jednym z najważniejszych plików projektu Node.js. Przechowuje informacje o projekcie, m.in. jego nazwę, wersję, opis, punkt wejścia, listę skryptów oraz listę zależności.
 
-Nazwa projektu:
+Można powiedzieć, że jest to "dowód osobisty" projektu - każdy, kto otworzy repozytorium, na podstawie tego jednego pliku wie, czym jest projekt, jak go uruchomić i jakich bibliotek potrzebuje.
 
-```json
-"name": "moja-aplikacja"
-```
-
-## version
-
-Wersja:
-
-```json
-"version": "1.0.0"
-```
-
-Często stosuje się tutaj **Semantic Versioning**, czyli np.:
-
-```text
-1.0.0
-```
-
-gdzie:
-
-```text
-1 - major
-0 - minor
-0 - patch
-```
-
-## description
-
-Opis projektu:
-
-```json
-"description": "Backend aplikacji"
-```
-
-## main
-
-Określa główny plik aplikacji:
-
-```json
-"main": "server.js"
-```
-
-## scripts
-
-Definiuje własne polecenia:
-
-```json
-"scripts": {
-    "start": "node server.js"
-}
-```
-
-## dependencies
-
-Zawiera zależności wymagane przez aplikację:
-
-```json
-"dependencies": {
-    "express": "^5.1.0"
-}
-```
+Pełny przykładowy plik znajdziesz w sekcji z kodem, przykład 9.
 
 ---
 
-# 15. Instalowanie biblioteki
+## 14. Najważniejsze pola package.json
 
-Przykładowo instalujemy Express:
+* `name` - nazwa projektu.
+* `version` - wersja projektu, zwykle zapisywana w konwencji **Semantic Versioning** jako trzy liczby oddzielone kropkami: major, minor, patch (np. `1.0.0`).
+* `description` - krótki opis projektu.
+* `main` - wskazuje główny plik aplikacji.
+* `scripts` - zbiór własnych poleceń, które można uruchomić przez npm (więcej w sekcji 18).
+* `dependencies` - lista bibliotek wymaganych do działania aplikacji.
+* `devDependencies` - lista bibliotek potrzebnych tylko podczas developmentu (więcej w sekcji 20).
 
-```bash
-npm install express
-```
+---
 
-Po instalacji `package.json` może zawierać:
+## 15. Instalowanie bibliotek i katalog node_modules
 
-```json
-"dependencies": {
-    "express": "^5.1.0"
-}
-```
-
-Pojawi się również katalog:
+Instalację biblioteki wykonujemy poleceniem npm, podając jej nazwę (przykład w sekcji z kodem, przykład 10). Po instalacji npm dopisuje bibliotekę do pola `dependencies` w `package.json` oraz tworzy (albo aktualizuje) katalog:
 
 ```text
 node_modules/
 ```
 
-W nim npm przechowuje zainstalowane pakiety oraz ich zależności.
+W nim npm przechowuje zainstalowane pakiety oraz wszystkie ich zależności. Ten katalog potrafi być bardzo duży, dlatego nigdy nie dodaje się go do repozytorium Git - zamiast tego dodaje się go do pliku `.gitignore`.
 
-Struktura projektu może wyglądać tak:
+Struktura projektu po instalacji jednej biblioteki wygląda zwykle tak:
 
 ```text
 moja-aplikacja/
@@ -625,19 +316,11 @@ moja-aplikacja/
 
 ---
 
-# 16. package-lock.json
+## 16. package-lock.json
 
-Podczas instalacji zależności npm tworzy również:
+Podczas instalacji zależności npm tworzy również plik `package-lock.json`. Jego zadaniem jest zapisanie dokładnego drzewa zależności projektu - nie tylko bibliotek, które sami zainstalowaliśmy, ale też wszystkich bibliotek, od których one zależą, wraz z ich dokładnymi wersjami.
 
-```text
-package-lock.json
-```
-
-Jego zadaniem jest zapisanie dokładnego drzewa zależności projektu.
-
-Ma to znaczenie np. wtedy, gdy projekt zostanie sklonowany na innym komputerze.
-
-Chcemy, żeby:
+Ma to znaczenie np. wtedy, gdy projekt zostanie sklonowany na innym komputerze:
 
 ```text
 komputer A
@@ -653,134 +336,13 @@ npm install
 te same wersje
 ```
 
-`package-lock.json` pomaga zapewnić powtarzalność instalacji.
+`package-lock.json` pomaga zapewnić powtarzalność instalacji - dzięki niemu wszyscy w zespole (oraz środowisko produkcyjne) pracują na dokładnie tych samych wersjach bibliotek.
 
 ---
 
-# 17. node_modules
+## 17. localhost i port
 
-Po:
-
-```bash
-npm install express
-```
-
-powstaje:
-
-```text
-node_modules/
-```
-
-Nie powinno się zazwyczaj dodawać tego katalogu do repozytorium Git.
-
-Tworzymy:
-
-```text
-.gitignore
-```
-
-i wpisujemy:
-
-```gitignore
-node_modules/
-```
-
-Jeżeli ktoś pobierze projekt z GitHuba, może później wykonać:
-
-```bash
-npm install
-```
-
-npm odczyta:
-
-```text
-package.json
-package-lock.json
-```
-
-i zainstaluje wymagane zależności.
-
----
-
-# 18. Pierwszy projekt Node.js
-
-Utwórzmy:
-
-```text
-moja-aplikacja/
-├── package.json
-└── server.js
-```
-
-`server.js`:
-
-```javascript
-console.log("Witaj w Node.js!");
-```
-
-Uruchamiamy:
-
-```bash
-node server.js
-```
-
-Wynik:
-
-```text
-Witaj w Node.js!
-```
-
-Node.js wykonał JavaScript bez potrzeby używania przeglądarki.
-
----
-
-# 19. Prosty serwer HTTP
-
-Teraz możemy stworzyć pierwszy backend.
-
-`server.js`:
-
-```javascript
-const http = require("http");
-
-const server = http.createServer((req, res) => {
-    res.writeHead(200, {
-        "Content-Type": "text/plain; charset=utf-8"
-    });
-
-    res.end("Witaj na serwerze!");
-});
-
-server.listen(3000, () => {
-    console.log("Serwer działa na porcie 3000");
-});
-```
-
-Uruchomienie:
-
-```bash
-node server.js
-```
-
-Następnie:
-
-```text
-http://localhost:3000
-```
-
----
-
-# 20. localhost i port
-
-`localhost` oznacza lokalny komputer.
-
-Przykład:
-
-```text
-http://localhost:3000
-```
-
-oznacza:
+`localhost` oznacza lokalny komputer, na którym uruchomiony jest serwer. Adres w postaci `http://localhost:3000` rozbija się na trzy części:
 
 ```text
 http://
@@ -796,9 +358,7 @@ mój komputer
 port
 ```
 
-Port pozwala uruchamiać wiele usług na tym samym komputerze.
-
-Przykładowo:
+**Port** pozwala uruchamiać wiele niezależnych usług na tym samym komputerze jednocześnie - każda usługa nasłuchuje na innym numerze:
 
 ```text
 localhost:3000  → aplikacja Node.js
@@ -809,290 +369,31 @@ localhost:8080  → inna aplikacja
 
 ---
 
-# 21. Skrypty npm
+## 18. Skrypty npm
 
-Zamiast za każdym razem pisać:
+Zamiast za każdym razem ręcznie wpisywać polecenie uruchamiające aplikację, można zapisać je jako **skrypt** w polu `scripts` w `package.json` i nadać mu krótką nazwę, np. `start` albo `dev`.
 
-```bash
-node server.js
-```
+Skrypt o nazwie `start` można uruchomić skróconym poleceniem `npm start`. Każdy inny skrypt uruchamia się poleceniem `npm run <nazwa>`, np. `npm run dev`. Pełny przykład znajdziesz w sekcji z kodem, przykład 12.
 
-możemy utworzyć skrypt.
-
-W `package.json`:
-
-```json
-{
-    "scripts": {
-        "start": "node server.js"
-    }
-}
-```
-
-Teraz:
-
-```bash
-npm start
-```
-
-wykona:
-
-```bash
-node server.js
-```
-
-Możemy tworzyć wiele własnych skryptów:
-
-```json
-{
-    "scripts": {
-        "start": "node server.js",
-        "dev": "node server.js",
-        "test": "..."
-    }
-}
-```
-
-Uruchomienie:
-
-```bash
-npm run dev
-```
-
-Dla `start` npm pozwala użyć skróconej formy:
-
-```bash
-npm start
-```
-
-zamiast:
-
-```bash
-npm run start
-```
+Dzięki temu cały zespół uruchamia projekt w ten sam sposób, niezależnie od tego, jak dokładnie wygląda polecenie w środku.
 
 ---
 
-# 22. Przykładowy projekt od zera
+## 19. dependencies a devDependencies
 
-Cały proces może wyglądać tak:
+W `package.json` zależności dzielą się na dwie grupy.
 
-```bash
-mkdir backend
-cd backend
-npm init -y
-```
+**dependencies** to pakiety potrzebne do działania aplikacji w środowisku produkcyjnym, np. `express`, `mysql2`, `jsonwebtoken`, `bcrypt`. Bez nich aplikacja nie zadziała.
 
-Tworzymy:
+**devDependencies** to pakiety potrzebne głównie podczas tworzenia aplikacji, np. `nodemon`, `eslint`, biblioteki do testów. Nie są one potrzebne, żeby aplikacja działała na produkcji - pomagają tylko w codziennej pracy programisty.
 
-```text
-server.js
-```
-
-Dodajemy:
-
-```javascript
-console.log("Backend działa");
-```
-
-Uruchamiamy:
-
-```bash
-node server.js
-```
-
-Następnie instalujemy Express:
-
-```bash
-npm install express
-```
-
-i projekt zaczyna wyglądać mniej więcej tak:
-
-```text
-backend/
-│
-├── node_modules/
-├── package-lock.json
-├── package.json
-└── server.js
-```
+Instalacja zwykłej zależności i zależności developerskiej różni się jedną dodatkową flagą - dokładna składnia znajduje się w sekcji z kodem, przykład 10.
 
 ---
 
-# 23. Przykładowy package.json
+## 20. Co dzieje się po npm install?
 
-Po dodaniu skryptu:
-
-```json
-{
-    "name": "backend",
-    "version": "1.0.0",
-    "description": "Pierwszy backend Node.js",
-    "main": "server.js",
-    "scripts": {
-        "start": "node server.js"
-    },
-    "dependencies": {
-        "express": "^5.1.0"
-    }
-}
-```
-
-Możemy uruchomić:
-
-```bash
-npm start
-```
-
----
-
-# 24. Najważniejsze polecenia
-
-### Sprawdzenie wersji Node.js
-
-```bash
-node -v
-```
-
-### Sprawdzenie npm
-
-```bash
-npm -v
-```
-
-### Uruchomienie pliku
-
-```bash
-node server.js
-```
-
-### Utworzenie projektu
-
-```bash
-npm init
-```
-
-### Utworzenie projektu z wartościami domyślnymi
-
-```bash
-npm init -y
-```
-
-### Instalacja zależności
-
-```bash
-npm install express
-```
-
-### Instalacja zależności tylko do developmentu
-
-```bash
-npm install --save-dev <pakiet>
-```
-
-### Instalacja wszystkich zależności projektu
-
-```bash
-npm install
-```
-
-### Uruchomienie skryptu
-
-```bash
-npm run <nazwa>
-```
-
-Przykład:
-
-```bash
-npm run dev
-```
-
-### Uruchomienie skryptu start
-
-```bash
-npm start
-```
-
----
-
-# 25. `dependencies` a `devDependencies`
-
-W `package.json` możemy mieć:
-
-```json
-"dependencies": {
-    "express": "^5.1.0"
-}
-```
-
-oraz:
-
-```json
-"devDependencies": {
-    "nodemon": "^3.0.0"
-}
-```
-
-### dependencies
-
-Pakiety potrzebne do działania aplikacji.
-
-Przykładowo:
-
-```text
-express
-mysql2
-jsonwebtoken
-bcrypt
-```
-
-### devDependencies
-
-Pakiety potrzebne głównie podczas tworzenia aplikacji.
-
-Przykładowo:
-
-```text
-nodemon
-eslint
-test framework
-```
-
-Instalacja:
-
-```bash
-npm install express
-```
-
-dla zwykłej zależności.
-
-Dla zależności developerskiej:
-
-```bash
-npm install --save-dev nodemon
-```
-
----
-
-# 26. Co dzieje się po `npm install`?
-
-Załóżmy, że `package.json` zawiera:
-
-```json
-"dependencies": {
-    "express": "^5.1.0"
-}
-```
-
-Wykonujemy:
-
-```bash
-npm install
-```
-
-npm:
+Gdy w katalogu projektu wykonamy polecenie `npm install` bez podawania nazwy pakietu, npm wykonuje kilka kroków po kolei:
 
 ```text
 czyta package.json
@@ -1106,160 +407,49 @@ tworzy / aktualizuje node_modules
 aktualizuje package-lock.json
 ```
 
-Dlatego nie musimy przesyłać całego `node_modules` razem z projektem.
-
-Wystarczy:
-
-```text
-package.json
-package-lock.json
-kod aplikacji
-```
-
-a następnie:
-
-```bash
-npm install
-```
+Dlatego nie musimy przesyłać całego katalogu `node_modules` razem z projektem - wystarczy przesłać `package.json`, `package-lock.json` i kod aplikacji, a `npm install` odtworzy resztę na dowolnym komputerze.
 
 ---
 
-# 27. `node` jako interpreter
+## 21. node jako interpreter (tryb interaktywny)
 
-Możemy również uruchomić:
+Polecenie `node` można uruchomić również bez podawania nazwy pliku. Otwiera się wtedy interaktywne środowisko Node.js (tzw. REPL - *Read-Eval-Print Loop*), w którym można na bieżąco wpisywać i sprawdzać fragmenty JavaScript, bez potrzeby tworzenia pliku.
 
-```bash
-node
-```
-
-bez podawania pliku.
-
-Otworzy się wtedy interaktywne środowisko Node.js:
-
-```text
->
-```
-
-Możemy wpisać:
-
-```javascript
-2 + 2
-```
-
-i otrzymamy:
-
-```text
-4
-```
-
-Możemy też:
-
-```javascript
-console.log("Hello");
-```
-
-W ten sposób można szybko sprawdzać działanie fragmentów JavaScript.
-
-Wyjście:
-
-```text
-.exit
-```
-
-lub:
-
-```text
-Ctrl + C
-Ctrl + C
-```
+Jest to wygodne narzędzie do szybkiego sprawdzenia, jak zachowuje się dany fragment kodu. Wyjście z tego trybu następuje po wpisaniu `.exit` albo dwukrotnym naciśnięciu `Ctrl + C`. Przykład sesji znajduje się w sekcji z kodem, przykład 13.
 
 ---
 
-# 28. `process`
+## 22. process
 
-Node.js udostępnia globalny obiekt:
+Node.js udostępnia globalny obiekt `process`, który zawiera informacje o aktualnie uruchomionym procesie - m.in. wersję Node.js, argumenty przekazane przy uruchomieniu programu czy zmienne środowiskowe.
 
-```javascript
-process
-```
-
-Zawiera informacje dotyczące aktualnie uruchomionego procesu.
-
-Przykład:
-
-```javascript
-console.log(process.version);
-```
-
-Możemy otrzymać:
-
-```text
-v22.x.x
-```
-
-Możemy również odczytać argumenty przekazane do programu:
-
-```javascript
-console.log(process.argv);
-```
-
-Przykładowo:
-
-```bash
-node app.js hello
-```
-
-Argument `hello` znajdzie się w:
-
-```javascript
-process.argv
-```
+Jest to jeden z obiektów, z którymi uczeń najczęściej zetknie się przy pisaniu prostych skryptów i konfigurowaniu aplikacji serwerowych. Przykład użycia w sekcji z kodem, przykład 14.
 
 ---
 
-# 29. Zmienne środowiskowe
+## 23. Zmienne środowiskowe
 
-Node.js może korzystać ze zmiennych środowiskowych.
+**Zmienna środowiskowa** to wartość ustawiona poza kodem aplikacji - zwykle w systemie operacyjnym albo w pliku konfiguracyjnym - do której program ma dostęp przez `process.env`.
 
-Przykład:
-
-```javascript
-console.log(process.env.PORT);
-```
-
-Jeżeli ustawimy:
+Zmienne środowiskowe są wygodnym sposobem konfigurowania aplikacji bez zaszywania wartości (np. numeru portu czy hasła do bazy danych) bezpośrednio w kodzie:
 
 ```text
-PORT=3000
-```
-
-aplikacja może wykorzystać tę wartość.
-
-Często spotyka się:
-
-```javascript
-const port = process.env.PORT || 3000;
-```
-
-Czyli:
-
-```text
-jeżeli PORT istnieje
+jeżeli zmienna PORT istnieje
         ↓
 użyj PORT
         ↓
 w przeciwnym przypadku
         ↓
-użyj 3000
+użyj wartości domyślnej, np. 3000
 ```
 
-Jest to bardzo częsty sposób konfiguracji aplikacji backendowych.
+Jest to bardzo częsty wzorzec konfiguracji aplikacji backendowych - przykład kodu w sekcji z kodem, przykład 15.
 
 ---
 
-# 30. Najważniejsza rzecz: Node.js nie jest frameworkiem
+## 24. Node.js nie jest frameworkiem
 
-To bardzo częsta rzecz do pomylenia.
+To bardzo częsta rzecz do pomylenia:
 
 ```text
 JavaScript
@@ -1279,7 +469,7 @@ npm
 menedżer pakietów
 ```
 
-Możemy więc mieć:
+Wszystkie te elementy współpracują ze sobą, ale są odpowiedzialne za zupełnie inne rzeczy. Typowy backend w tym kursie będzie zbudowany na warstwach:
 
 ```text
 JavaScript
@@ -1291,13 +481,13 @@ Express
 MySQL
 ```
 
-i na tej podstawie stworzyć kompletny backend.
+Express nie jest jeszcze omawiany szczegółowo w tym pliku - to osobny temat, który pozwoli wygodniej tworzyć serwery HTTP niż robienie tego ręcznie modułem `http`.
 
 ---
 
-# 31. Jak wygląda typowy przepływ pracy?
+## 25. Jak wygląda typowy przepływ pracy?
 
-Przy tworzeniu backendu Node.js często zaczynamy od:
+Przy tworzeniu backendu w Node.js proces zwykle wygląda tak:
 
 ```text
 1. Instalacja Node.js
@@ -1317,19 +507,11 @@ Przy tworzeniu backendu Node.js często zaczynamy od:
 8. Uruchomienie aplikacji
 ```
 
-Przykład:
-
-```bash
-mkdir moja-aplikacja
-cd moja-aplikacja
-npm init -y
-npm install express
-npm start
-```
+Cały ten proces w formie gotowych poleceń do wklejenia w terminal znajduje się w sekcji z kodem, przykład 16.
 
 ---
 
-# 32. Co trzeba umieć na INF.04 z tego tematu?
+## 26. Co trzeba umieć na INF.04 z tego tematu?
 
 Po przerobieniu tego zagadnienia powinieneś swobodnie rozumieć:
 
@@ -1340,8 +522,7 @@ Po przerobieniu tego zagadnienia powinieneś swobodnie rozumieć:
 * do czego wykorzystuje się Node.js,
 * czym jest V8,
 * czym jest Event Loop,
-* czym jest operacja synchroniczna,
-* czym jest operacja asynchroniczna,
+* czym jest operacja synchroniczna, a czym asynchroniczna,
 * dlaczego nie należy blokować Event Loop,
 * czym jest npm,
 * jak sprawdzić wersję Node.js,
@@ -1349,18 +530,16 @@ Po przerobieniu tego zagadnienia powinieneś swobodnie rozumieć:
 * czym jest `package.json`,
 * do czego służy `package-lock.json`,
 * czym jest `node_modules`,
-* czym są `dependencies`,
-* czym są `devDependencies`,
+* czym są `dependencies` i `devDependencies`,
 * jak instalować pakiety,
 * jak uruchamiać skrypty npm,
 * jak uruchomić plik `.js` przez `node`,
-* czym jest `localhost`,
-* czym jest port,
-* jak stworzyć prosty serwer HTTP,
+* czym jest `localhost` i port,
+* jak działa prosty serwer HTTP,
 * do czego służy `process`,
 * czym są zmienne środowiskowe.
 
-## Minimum, które powinno wejść w pamięć
+### Minimum, które powinno wejść w pamięć
 
 ```text
 Node.js
@@ -1397,7 +576,7 @@ npm start
 → uruchomienie skryptu start
 ```
 
-### Najprostszy model do zapamiętania
+Najprostszy model do zapamiętania:
 
 ```text
 JavaScript
@@ -1431,4 +610,361 @@ Event Loop
 obsługa wielu operacji I/O
     ↓
 serwer może odpowiadać wielu klientom
+```
+
+---
+
+## Kod - przykłady
+
+Poniżej wszystkie przykłady kodu z tego tematu, w kolejności odpowiadającej opisanej wyżej teorii. Każdy z nich można samodzielnie przepisać i uruchomić.
+
+### Przykład 1: sprawdzenie wersji Node.js i npm
+
+```bash
+node --version
+npm -v
+```
+
+Przykładowy wynik dla Node.js:
+
+```text
+v22.18.0
+```
+
+### Przykład 2: pierwszy plik JavaScript uruchomiony przez Node.js
+
+`server.js`:
+
+```javascript
+console.log("Witaj w Node.js!");
+```
+
+Uruchomienie:
+
+```bash
+node server.js
+```
+
+Wynik w terminalu:
+
+```text
+Witaj w Node.js!
+```
+
+Node.js wykonał JavaScript bez potrzeby używania przeglądarki.
+
+### Przykład 3: wbudowany moduł fs - zapis pliku
+
+```javascript
+const fs = require("fs");
+
+fs.writeFileSync("test.txt", "Hello Node.js!");
+```
+
+Kod utworzy w katalogu projektu plik `test.txt` z podaną treścią.
+
+### Przykład 4: Event Loop w praktyce
+
+```javascript
+console.log("1");
+
+setTimeout(() => {
+    console.log("2");
+}, 1000);
+
+console.log("3");
+```
+
+Wynik w konsoli:
+
+```text
+1
+3
+2
+```
+
+Mimo że `setTimeout` znajduje się przed `console.log("3")` w kodzie, jego treść wykona się dopiero po około sekundzie - Node.js nie czeka bezczynnie na jego zakończenie.
+
+### Przykład 5: kod synchroniczny
+
+```javascript
+console.log("A");
+console.log("B");
+console.log("C");
+```
+
+Wynik zawsze w tej samej kolejności:
+
+```text
+A
+B
+C
+```
+
+### Przykład 6: kod asynchroniczny - odczyt pliku
+
+```javascript
+const fs = require("fs");
+
+fs.readFile("plik.txt", "utf8", (err, data) => {
+    if (err) {
+        console.error(err);
+        return;
+    }
+
+    console.log(data);
+});
+
+console.log("Koniec");
+```
+
+W terminalu możemy otrzymać:
+
+```text
+Koniec
+zawartość pliku
+```
+
+Node.js rozpoczął odczytywanie pliku, ale nie czekał na jego zakończenie - wykonał najpierw dalszy kod, a zawartość pliku wypisał, gdy odczyt się zakończył.
+
+### Przykład 7: blokowanie Event Loop (czego unikać)
+
+```javascript
+while (true) {
+}
+```
+
+Program utknie w nieskończonej pętli i nie będzie w stanie obsłużyć żadnych kolejnych żądań. Podobny efekt daje bardzo ciężkie, w pełni synchroniczne obliczenie:
+
+```javascript
+function veryHeavyCalculation() {
+    // bardzo dużo obliczeń
+}
+
+veryHeavyCalculation();
+```
+
+Jeżeli takie obliczenia trwają kilka sekund, przez ten czas Event Loop nie może wykonywać żadnych innych zadań JavaScript.
+
+### Przykład 8: inicjalizacja projektu
+
+```bash
+mkdir moja-aplikacja
+cd moja-aplikacja
+npm init
+```
+
+npm zada kilka pytań dotyczących projektu. Można też pominąć te pytania i przyjąć wartości domyślne:
+
+```bash
+npm init -y
+```
+
+### Przykład 9: package.json od podstaw
+
+```json
+{
+    "name": "moja-aplikacja",
+    "version": "1.0.0",
+    "description": "Moja pierwsza aplikacja Node.js",
+    "main": "server.js",
+    "scripts": {
+        "start": "node server.js"
+    },
+    "dependencies": {}
+}
+```
+
+### Przykład 10: instalacja biblioteki i node_modules
+
+```bash
+npm install express
+```
+
+Po instalacji `package.json` zawiera nową zależność:
+
+```json
+"dependencies": {
+    "express": "^5.1.0"
+}
+```
+
+Instalacja zależności developerskiej różni się dodatkową flagą:
+
+```bash
+npm install --save-dev nodemon
+```
+
+Katalog `node_modules` wykluczamy z repozytorium przez plik `.gitignore`:
+
+```gitignore
+node_modules/
+```
+
+### Przykład 11: prosty serwer HTTP
+
+`server.js`:
+
+```javascript
+const http = require("http");
+
+const server = http.createServer((req, res) => {
+    res.writeHead(200, {
+        "Content-Type": "text/plain; charset=utf-8"
+    });
+
+    res.end("Witaj na serwerze!");
+});
+
+server.listen(3000, () => {
+    console.log("Serwer działa na porcie 3000");
+});
+```
+
+Uruchomienie:
+
+```bash
+node server.js
+```
+
+Następnie w przeglądarce otwieramy:
+
+```text
+http://localhost:3000
+```
+
+### Przykład 12: skrypty npm
+
+W `package.json`:
+
+```json
+{
+    "scripts": {
+        "start": "node server.js",
+        "dev": "node server.js"
+    }
+}
+```
+
+Uruchomienie skryptu `start`:
+
+```bash
+npm start
+```
+
+Uruchomienie dowolnego innego skryptu:
+
+```bash
+npm run dev
+```
+
+### Przykład 13: node jako interpreter (REPL)
+
+```bash
+node
+```
+
+W otwartej konsoli:
+
+```text
+> 2 + 2
+4
+> console.log("Hello")
+Hello
+> .exit
+```
+
+### Przykład 14: process i argumenty programu
+
+```javascript
+console.log(process.version);
+console.log(process.argv);
+```
+
+Jeżeli uruchomimy program z dodatkowym argumentem:
+
+```bash
+node app.js hello
+```
+
+argument `hello` znajdzie się w tablicy `process.argv`.
+
+### Przykład 15: zmienne środowiskowe
+
+```javascript
+const port = process.env.PORT || 3000;
+
+console.log(`Serwer wystartuje na porcie ${port}`);
+```
+
+Jeżeli w systemie ustawiona jest zmienna `PORT`, aplikacja użyje jej wartości. W przeciwnym razie użyje domyślnego portu `3000`.
+
+### Przykład 16: cały projekt od zera
+
+```bash
+mkdir backend
+cd backend
+npm init -y
+npm install express
+```
+
+Tworzymy plik `server.js`:
+
+```javascript
+console.log("Backend działa");
+```
+
+Uruchamiamy:
+
+```bash
+node server.js
+```
+
+Projekt po tych krokach ma strukturę:
+
+```text
+backend/
+│
+├── node_modules/
+├── package-lock.json
+├── package.json
+└── server.js
+```
+
+Kompletny `package.json` po dodaniu skryptu `start`:
+
+```json
+{
+    "name": "backend",
+    "version": "1.0.0",
+    "description": "Pierwszy backend Node.js",
+    "main": "server.js",
+    "scripts": {
+        "start": "node server.js"
+    },
+    "dependencies": {
+        "express": "^5.1.0"
+    }
+}
+```
+
+Uruchomienie przez skrypt:
+
+```bash
+npm start
+```
+
+### Ściągawka najważniejszych poleceń
+
+```bash
+node -v                          # wersja Node.js
+npm -v                           # wersja npm
+node server.js                   # uruchomienie pliku
+npm init                         # utworzenie projektu (z pytaniami)
+npm init -y                      # utworzenie projektu (wartości domyślne)
+npm install express              # instalacja zależności
+npm install --save-dev nodemon   # instalacja zależności developerskiej
+npm install                      # instalacja wszystkich zależności z package.json
+npm run <nazwa>                  # uruchomienie dowolnego skryptu
+npm start                        # uruchomienie skryptu "start"
 ```
