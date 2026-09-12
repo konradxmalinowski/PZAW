@@ -142,18 +142,10 @@ W praktyce projekt korzysta z jednego z tych systemów konsekwentnie - nie miesz
 
 Moduł `path` służy do budowania i przetwarzania ścieżek do plików w sposób niezależny od systemu operacyjnego. Windows używa zwykle `\`, a Linux i macOS używają `/`. Jeśli sklejasz ścieżki ręcznie, kod może działać u Ciebie, ale popsuć się na innym komputerze.
 
-W nowszych przykładach często zobaczysz zapis z prefiksem `node:`:
-
-```javascript
-const path = require("node:path");
-```
-
-`require("path")` też działa. Prefiks `node:` tylko jasno pokazuje, że chodzi o wbudowany moduł Node.js, a nie paczkę z `node_modules`.
-
 Najczęstszy przypadek to zbudowanie ścieżki do pliku leżącego obok aktualnego skryptu:
 
 ```javascript
-const path = require("node:path");
+const path = require("path");
 
 const filePath = path.join(__dirname, "dane", "plik.txt");
 
@@ -174,7 +166,7 @@ W prostych szkolnych skryptach często wychodzi na to samo, ale w prawdziwych pr
 ### Najważniejsze metody path
 
 ```javascript
-const path = require("node:path");
+const path = require("path");
 
 const example = "/home/uczen/projekt/dane/raport.txt";
 
@@ -200,7 +192,7 @@ console.log(path.parse(example));
 To przydaje się, gdy chcesz np. zmienić nazwę pliku, zostawiając rozszerzenie:
 
 ```javascript
-const path = require("node:path");
+const path = require("path");
 
 const file = "zdjecie.png";
 const parsed = path.parse(file);
@@ -242,214 +234,226 @@ Na tym etapie możesz głównie kojarzyć ten zapis. W dalszych przykładach tej
 
 Moduł `fs` (*file system*) pozwala czytać, zapisywać, dopisywać, kopiować, przenosić, usuwać i sprawdzać pliki oraz katalogi.
 
-Są trzy style korzystania z `fs`:
+W tej lekcji używamy trzech stylów pracy z `fs`:
 
-| Styl | Przykład | Kiedy używać |
+| Styl | Przykład | Jak działa |
 |---|---|---|
-| synchroniczny | `fs.readFileSync()` | małe skrypty, proste ćwiczenia, kod startowy |
-| callback | `fs.readFile(..., callback)` | starszy kod Node.js, warto umieć przeczytać |
-| Promise | `fs/promises` + `async/await` | najczytelniejszy styl w nowym kodzie backendowym |
+| synchroniczny | `fs.readFileSync()` | program czeka, aż operacja się zakończy |
+| callbackowy | `fs.readFile(..., callback)` | program zleca operację, a wynik dostaje później w funkcji callback |
+| przez Promise | `fs.promises.readFile()` | program zleca operację i czeka na wynik przez `await`, bez blokowania Event Loop |
 
-W dokumentacji Node.js prawie każda operacja ma te trzy wersje:
+Nie mieszamy tych stylów w jednym przykładzie. Jeśli używasz wersji synchronicznej, nazwy metod kończą się zwykle na `Sync`. Jeśli używasz callbacków, przekazujesz funkcję jako ostatni argument. Jeśli używasz Promise, bierzesz metody z `fs.promises` i korzystasz z `async`/`await`.
 
-```text
-readFile      - asynchronicznie z callbackiem
-readFileSync  - synchronicznie
-fs/promises   - asynchronicznie z Promise
-```
+### Zapis i odczyt synchroniczny
 
-### Odczyt i zapis synchroniczny
+Zanim przejdziemy do kodu - w przykładzie poniżej pojawia się blok `try { ... } catch (error) { ... }`. Kod w środku `try` wykonuje się normalnie, ale jeśli w trakcie coś pójdzie nie tak (np. plik nie istnieje albo brakuje uprawnień), operacja rzuca błąd - program nie kończy się awarią, tylko od razu przeskakuje do bloku `catch`, gdzie `error` opisuje, co się nie udało. Bez `try/catch` taki błąd zatrzymałby cały program.
 
 ```javascript
-const fs = require("node:fs");
-const path = require("node:path");
+const fs = require("fs");
+const path = require("path");
 
-const filePath = path.join(__dirname, "dane.txt");
+const filePath = path.join(__dirname, "app.txt");
 
-fs.writeFileSync(filePath, "Witaj w pliku!", "utf8");
+try {
+    fs.writeFileSync(filePath, "Pierwsza linia\n", "utf8");
+    fs.appendFileSync(filePath, "Druga linia\n", "utf8");
 
-const content = fs.readFileSync(filePath, "utf8");
-
-console.log(content);
+    const content = fs.readFileSync(filePath, "utf8");
+    console.log(content);
+} catch (error) {
+    console.error("Błąd:", error.message);
+}
 ```
 
-`writeFileSync` zapisuje plik. Jeśli plik już istnieje, jego poprzednia zawartość zostanie nadpisana. `readFileSync` odczytuje plik i zwraca jego zawartość. Argument `"utf8"` oznacza, że pracujemy z tekstem. Bez niego Node.js zwróci `Buffer`, czyli surowe bajty.
+`writeFileSync` zapisuje plik od zera. Jeśli plik już istnieje, jego poprzednia zawartość zostanie nadpisana. `appendFileSync` dopisuje tekst na końcu pliku. `readFileSync` odczytuje plik i zwraca jego zawartość.
 
-Wersja synchroniczna jest prosta, ale blokuje Event Loop. To znaczy, że na czas odczytu lub zapisu Node.js nie obsługuje innego kodu JavaScript. W małym skrypcie to zwykle nie problem. W serwerze HTTP obsługującym wielu użytkowników lepiej używać wersji asynchronicznej.
+Argument `"utf8"` oznacza, że pracujemy z tekstem. Bez niego Node.js zwróci `Buffer`, czyli surowe bajty.
 
-### Odczyt asynchroniczny z callbackiem
+Wersja synchroniczna jest prosta i dobra do pierwszych ćwiczeń, ale blokuje Event Loop. To znaczy, że na czas odczytu lub zapisu Node.js nie wykonuje dalszego kodu JavaScript.
+
+### Zapis i odczyt asynchroniczny z callbackiem
 
 ```javascript
-const fs = require("node:fs");
-const path = require("node:path");
+const fs = require("fs");
+const path = require("path");
 
-const filePath = path.join(__dirname, "dane.txt");
+const filePath = path.join(__dirname, "app.txt");
 
-fs.readFile(filePath, "utf8", (err, content) => {
-    if (err) {
-        console.error("Błąd odczytu:", err.message);
+fs.writeFile(filePath, "Pierwsza linia\n", "utf8", (error) => {
+    if (error) {
+        console.error("Błąd zapisu:", error.message);
         return;
     }
 
-    console.log("Zawartość:", content);
+    fs.appendFile(filePath, "Druga linia\n", "utf8", (error) => {
+        if (error) {
+            console.error("Błąd dopisywania:", error.message);
+            return;
+        }
+
+        fs.readFile(filePath, "utf8", (error, content) => {
+            if (error) {
+                console.error("Błąd odczytu:", error.message);
+                return;
+            }
+
+            console.log(content);
+        });
+    });
 });
 
 console.log("Ten tekst pojawi się przed wynikiem odczytu");
 ```
 
-Callback dostaje zwykle dwa argumenty: `err` i wynik operacji. Jeśli `err` nie jest puste, coś poszło nie tak, np. plik nie istnieje albo program nie ma uprawnień do odczytu.
+W wersji callbackowej ostatnim argumentem metody jest funkcja, która uruchomi się dopiero po zakończeniu operacji. Pierwszy argument callbacka to zwykle `error`. Jeśli `error` istnieje, operacja się nie udała, więc trzeba obsłużyć błąd i przerwać dalsze kroki.
 
-### Odczyt i zapis przez Promise
+W tym przykładzie operacje są zagnieżdżone, bo kolejność ma znaczenie: najpierw zapis, potem dopisanie, potem odczyt. Gdyby te trzy funkcje wywołać jedna pod drugą bez zagnieżdżania, Node.js rozpocząłby je prawie jednocześnie i kolejność wyniku nie byłaby gwarantowana.
+
+### Zapis i odczyt przez Promise (fs.promises)
+
+Trzeci styl opiera się na `Promise`. **`Promise`** to obiekt, który reprezentuje wynik operacji asynchronicznej, zanim jeszcze ten wynik jest gotowy - można go traktować jak "obietnicę", że za chwilę dostaniemy albo poprawny wynik, albo błąd. Słowo `async` przed `function` oznacza, że wewnątrz tej funkcji można używać `await`. `await` "czeka" na zakończenie `Promise` i podstawia bezpośrednio jego wynik do zmiennej - dzięki temu kod wygląda niemal tak samo jak wersja synchroniczna, ale w tle nadal nie blokuje Event Loop.
 
 ```javascript
-const fs = require("node:fs/promises");
-const path = require("node:path");
+const fs = require("fs").promises;
+const path = require("path");
+
+const filePath = path.join(__dirname, "app.txt");
 
 async function main() {
-    const filePath = path.join(__dirname, "dane.txt");
-
     try {
         await fs.writeFile(filePath, "Pierwsza linia\n", "utf8");
         await fs.appendFile(filePath, "Druga linia\n", "utf8");
 
         const content = await fs.readFile(filePath, "utf8");
         console.log(content);
-    } catch (err) {
-        console.error("Operacja na pliku nie powiodła się:", err.message);
+    } catch (error) {
+        console.error("Błąd:", error.message);
     }
 }
 
 main();
 ```
 
-`fs/promises` jest wygodne, bo można pisać kod od góry do dołu za pomocą `await`, a błędy obsługiwać jednym blokiem `try/catch`.
+`require("fs").promises` daje dostęp do wersji metod `fs`, które zamiast callbacka zwracają `Promise`. Dzięki temu można używać `async`/`await`, a błędy obsługiwać jednym blokiem `try/catch` - podobnie jak w wersji synchronicznej, ale bez blokowania Event Loop. Kolejność operacji nadal jest gwarantowana, bo każde `await` czeka na zakończenie poprzedniej operacji, zanim przejdzie do następnej linii.
+
+`fs.promises.writeFile` to inna funkcja niż zwykłe, callbackowe `fs.writeFile`. Nie można użyć `await` na wersji callbackowej - ona nie zwraca żadnej wartości, więc `await` nic by tam nie dał.
 
 ### Przydatne metody do plików
 
-| Metoda synchroniczna | Metoda Promise | Co robi |
-|---|---|---|
-| `readFileSync` | `readFile` | odczytuje plik |
-| `writeFileSync` | `writeFile` | zapisuje plik od zera, nadpisuje starą zawartość |
-| `appendFileSync` | `appendFile` | dopisuje dane na końcu pliku |
-| `copyFileSync` | `copyFile` | kopiuje jeden plik do drugiego |
-| `renameSync` | `rename` | zmienia nazwę albo przenosi plik |
-| `unlinkSync` | `unlink` | usuwa plik |
-| `existsSync` | `access` | sprawdza, czy ścieżka istnieje lub jest dostępna |
-| `statSync` | `stat` | zwraca informacje o pliku lub katalogu |
+| Synchronicznie | Callbackowo | Przez Promise | Co robi |
+|---|---|---|---|
+| `readFileSync` | `readFile` | `fs.promises.readFile` | odczytuje plik |
+| `writeFileSync` | `writeFile` | `fs.promises.writeFile` | zapisuje plik od zera, nadpisuje starą zawartość |
+| `appendFileSync` | `appendFile` | `fs.promises.appendFile` | dopisuje dane na końcu pliku |
+| `copyFileSync` | `copyFile` | `fs.promises.copyFile` | kopiuje jeden plik do drugiego |
+| `renameSync` | `rename` | `fs.promises.rename` | zmienia nazwę albo przenosi plik |
+| `unlinkSync` | `unlink` | `fs.promises.unlink` | usuwa plik |
+| `existsSync` | `access` | `fs.promises.access` | sprawdza, czy ścieżka istnieje lub jest dostępna |
+| `statSync` | `stat` | `fs.promises.stat` | zwraca informacje o pliku lub katalogu |
 
-Przykład kilku operacji w jednym skrypcie:
+Przykład kilku operacji synchronicznych w jednym skrypcie:
 
 ```javascript
-const fs = require("node:fs/promises");
-const path = require("node:path");
+const fs = require("fs");
+const path = require("path");
 
-async function main() {
-    const notesPath = path.join(__dirname, "notes.txt");
-    const backupPath = path.join(__dirname, "notes-backup.txt");
-    const movedPath = path.join(__dirname, "archiwum-notes.txt");
+const notesPath = path.join(__dirname, "notes.txt");
+const backupPath = path.join(__dirname, "notes-backup.txt");
+const movedPath = path.join(__dirname, "archiwum-notes.txt");
 
-    await fs.writeFile(notesPath, "Start notatek\n", "utf8");
-    await fs.appendFile(notesPath, "Dopisany wpis\n", "utf8");
-    await fs.copyFile(notesPath, backupPath);
-    await fs.rename(backupPath, movedPath);
+try {
+    fs.writeFileSync(notesPath, "Start notatek\n", "utf8");
+    fs.appendFileSync(notesPath, "Dopisany wpis\n", "utf8");
+    fs.copyFileSync(notesPath, backupPath);
+    fs.renameSync(backupPath, movedPath);
 
-    const stats = await fs.stat(notesPath);
+    const stats = fs.statSync(notesPath);
     console.log("Rozmiar pliku:", stats.size, "bajtów");
     console.log("Czy to plik?", stats.isFile());
 
-    await fs.unlink(movedPath);
+    fs.unlinkSync(movedPath);
+} catch (error) {
+    console.error("Błąd:", error.message);
 }
-
-main().catch((err) => {
-    console.error("Błąd:", err.message);
-});
 ```
 
-`rename` ma dwie typowe role: zmiana nazwy w tym samym katalogu albo przeniesienie pliku do innego katalogu. `unlink` usuwa plik, ale nie usuwa katalogu. Do katalogów służą inne metody.
+`rename` ma dwie typowe role: zmiana nazwy w tym samym katalogu albo przeniesienie pliku do innego katalogu. `unlink` usuwa plik, ale nie usuwa katalogu.
 
-Sprawdzanie, czy plik istnieje, można zrobić prosto przez `existsSync`:
+Sprawdzanie, czy plik istnieje, można zrobić przez `existsSync`:
 
 ```javascript
-const fs = require("node:fs");
+const fs = require("fs");
 
 if (fs.existsSync("config.json")) {
     console.log("Plik istnieje");
 }
 ```
 
-W kodzie asynchronicznym częściej spotkasz `access`:
+Callbackowy odpowiednik sprawdzenia dostępu to `access`:
 
 ```javascript
-const fs = require("node:fs/promises");
+const fs = require("fs");
 
-async function exists(filePath) {
-    try {
-        await fs.access(filePath);
-        return true;
-    } catch {
-        return false;
+fs.access("config.json", (error) => {
+    if (error) {
+        console.log("Plik nie istnieje albo nie jest dostępny");
+        return;
     }
-}
-```
 
-`access` nie zwraca `true` albo `false`. Jeśli ścieżka jest dostępna, kończy się sukcesem. Jeśli nie jest dostępna, rzuca błąd, dlatego opakowujemy ją w `try/catch`.
+    console.log("Plik jest dostępny");
+});
+```
 
 ---
 
 ## 7. Pliki JSON - częsty przypadek w ćwiczeniach
 
+**JSON** (*JavaScript Object Notation*) to format zapisu danych jako zwykły tekst, wyglądający podobnie do obiektu i tablicy w JavaScript, np. `{"name": "Ala", "age": 10}`. Plik zapisany na dysku to zawsze tylko tekst - JSON to jeden z najpopularniejszych sposobów zapisania w tym tekście czegoś bardziej złożonego niż pojedyncze zdanie, np. listy użytkowników.
+
 W prostych zadaniach dane często trzyma się w pliku `.json`. Schemat pracy wygląda tak:
 
 1. Odczytaj plik jako tekst.
-2. Zamień tekst na tablicę lub obiekt przez `JSON.parse`.
+2. Zamień tekst na tablicę lub obiekt przez `JSON.parse` (funkcja wbudowana w JavaScript, nie w Node.js - działa też w przeglądarce).
 3. Zmień dane w JavaScripcie.
 4. Zamień dane z powrotem na tekst przez `JSON.stringify`.
 5. Zapisz plik.
 
 ```javascript
-const fs = require("node:fs/promises");
-const path = require("node:path");
+const fs = require("fs");
+const path = require("path");
 
 const filePath = path.join(__dirname, "users.json");
 
-async function loadUsers() {
-    try {
-        const content = await fs.readFile(filePath, "utf8");
-        return JSON.parse(content);
-    } catch (err) {
-        if (err.code === "ENOENT") {
-            return [];
-        }
-
-        throw err;
+function loadUsers() {
+    if (!fs.existsSync(filePath)) {
+        return [];
     }
+
+    const content = fs.readFileSync(filePath, "utf8");
+    return JSON.parse(content);
 }
 
-async function saveUsers(users) {
+function saveUsers(users) {
     const json = JSON.stringify(users, null, 2);
-    await fs.writeFile(filePath, json, "utf8");
+    fs.writeFileSync(filePath, json, "utf8");
 }
 
-async function main() {
-    const users = await loadUsers();
+try {
+    const users = loadUsers();
 
     users.push({
         id: Date.now(),
         name: "Ala"
     });
 
-    await saveUsers(users);
+    saveUsers(users);
     console.log("Zapisano użytkowników:", users.length);
+} catch (error) {
+    console.error("Błąd:", error.message);
 }
-
-main().catch((err) => {
-    console.error("Błąd:", err.message);
-});
 ```
 
-`err.code === "ENOENT"` oznacza, że plik lub katalog nie istnieje. W tym przykładzie brak pliku `users.json` traktujemy jako pustą listę użytkowników. Inne błędy przepuszczamy dalej przez `throw err`, bo mogą oznaczać realny problem, np. uszkodzony JSON albo brak uprawnień.
-
-`JSON.stringify(users, null, 2)` zapisuje JSON z wcięciami, dzięki czemu plik jest czytelny dla człowieka.
+`JSON.stringify(users, null, 2)` zapisuje JSON z wcięciami, dzięki czemu plik jest czytelny dla człowieka. Jeśli plik JSON jest uszkodzony, `JSON.parse` rzuci błąd, dlatego cały przykład jest opakowany w `try/catch`.
 
 ---
 
@@ -458,127 +462,104 @@ main().catch((err) => {
 `fs` pozwala tworzyć, czytać i usuwać katalogi. W praktyce bardzo często łączy się go z `path`, żeby nie sklejać ścieżek ręcznie.
 
 ```javascript
-const fs = require("node:fs/promises");
-const path = require("node:path");
+const fs = require("fs");
+const path = require("path");
 
-async function main() {
-    const dataDir = path.join(__dirname, "data");
-    const filePath = path.join(dataDir, "config.json");
+const dataDir = path.join(__dirname, "data");
+const filePath = path.join(dataDir, "config.json");
 
-    await fs.mkdir(dataDir, { recursive: true });
+try {
+    fs.mkdirSync(dataDir, { recursive: true });
 
-    await fs.writeFile(filePath, JSON.stringify({
+    fs.writeFileSync(filePath, JSON.stringify({
         createdAt: new Date().toISOString()
     }, null, 2), "utf8");
 
-    const entries = await fs.readdir(dataDir);
+    const entries = fs.readdirSync(dataDir);
     console.log(entries);
+} catch (error) {
+    console.error("Błąd:", error.message);
 }
-
-main().catch((err) => {
-    console.error("Błąd:", err.message);
-});
 ```
 
-`mkdir(path)` tworzy katalog. Jeśli katalog już istnieje, bez dodatkowych opcji pojawi się błąd. Opcja `{ recursive: true }` oznacza: "utwórz brakujące katalogi po drodze i nie traktuj istniejącego katalogu jako problemu".
+`mkdirSync(path)` tworzy katalog. Jeśli katalog już istnieje, bez dodatkowych opcji pojawi się błąd. Opcja `{ recursive: true }` oznacza: "utwórz brakujące katalogi po drodze i nie traktuj istniejącego katalogu jako problemu".
 
 ```javascript
-await fs.mkdir(path.join(__dirname, "data", "logs", "2026"), {
+fs.mkdirSync(path.join(__dirname, "data", "logs", "2026"), {
     recursive: true
 });
 ```
 
-`readdir` domyślnie zwraca same nazwy:
+`readdirSync` domyślnie zwraca same nazwy:
 
 ```javascript
-const names = await fs.readdir("data");
+const names = fs.readdirSync("data");
 console.log(names); // ["config.json", "logs"]
 ```
 
 Jeśli chcesz wiedzieć, co jest plikiem, a co katalogiem, użyj opcji `{ withFileTypes: true }`:
 
 ```javascript
-const fs = require("node:fs/promises");
+const fs = require("fs");
 
-async function main() {
-    const entries = await fs.readdir("data", {
-        withFileTypes: true
-    });
+const entries = fs.readdirSync("data", {
+    withFileTypes: true
+});
 
-    for (const entry of entries) {
-        if (entry.isDirectory()) {
-            console.log("[DIR] ", entry.name);
-        } else if (entry.isFile()) {
-            console.log("[FILE]", entry.name);
-        } else {
-            console.log("[INNE]", entry.name);
-        }
+for (const entry of entries) {
+    if (entry.isDirectory()) {
+        console.log("[DIR] ", entry.name);
+    } else if (entry.isFile()) {
+        console.log("[FILE]", entry.name);
+    } else {
+        console.log("[INNE]", entry.name);
     }
 }
-
-main();
 ```
 
 `Dirent` to obiekt opisujący jeden wpis w katalogu. Ma metody takie jak `isFile()`, `isDirectory()` i `isSymbolicLink()`.
 
-Do dokładniejszych informacji służy `stat`:
+Do dokładniejszych informacji służy `statSync`:
 
 ```javascript
-const fs = require("node:fs/promises");
-const path = require("node:path");
+const fs = require("fs");
+const path = require("path");
 
-async function main() {
-    const filePath = path.join(__dirname, "data", "config.json");
-    const stats = await fs.stat(filePath);
+const filePath = path.join(__dirname, "data", "config.json");
+const stats = fs.statSync(filePath);
 
-    console.log("Plik:", stats.isFile());
-    console.log("Katalog:", stats.isDirectory());
-    console.log("Rozmiar:", stats.size, "bajtów");
-    console.log("Ostatnia modyfikacja:", stats.mtime);
-}
+console.log("Plik:", stats.isFile());
+console.log("Katalog:", stats.isDirectory());
+console.log("Rozmiar:", stats.size, "bajtów");
+console.log("Ostatnia modyfikacja:", stats.mtime);
+```
 
-main();
+Callbackowo `readdir` wygląda tak:
+
+```javascript
+const fs = require("fs");
+
+fs.readdir("data", { withFileTypes: true }, (error, entries) => {
+    if (error) {
+        console.error("Błąd odczytu katalogu:", error.message);
+        return;
+    }
+
+    for (const entry of entries) {
+        console.log(entry.isDirectory() ? "[DIR]" : "[FILE]", entry.name);
+    }
+});
 ```
 
 Usuwanie:
 
 ```javascript
-await fs.unlink("data/config.json");                 // usuwa plik
-await fs.rmdir("pusty-katalog");                     // usuwa pusty katalog
-await fs.rm("data", { recursive: true, force: true }); // usuwa katalog z zawartością
+fs.unlinkSync("data/config.json");                    // usuwa plik
+fs.rmdirSync("pusty-katalog");                        // usuwa pusty katalog
+fs.rmSync("data", { recursive: true, force: true });   // usuwa katalog z zawartością
 ```
 
-`rmdir` nadaje się tylko do pustych katalogów. Do usuwania katalogu razem z zawartością używa się `rm` z `{ recursive: true }`. Opcja `force: true` sprawia, że brak ścieżki nie kończy programu błędem.
-
-### Prosty podgląd katalogu
-
-Ten przykład wypisuje zawartość katalogu razem z informacją, czy wpis jest plikiem, czy katalogiem:
-
-```javascript
-const fs = require("node:fs/promises");
-const path = require("node:path");
-
-async function listDirectory(dirPath) {
-    const entries = await fs.readdir(dirPath, {
-        withFileTypes: true
-    });
-
-    for (const entry of entries) {
-        const fullPath = path.join(dirPath, entry.name);
-
-        if (entry.isDirectory()) {
-            console.log("Katalog:", fullPath);
-        } else if (entry.isFile()) {
-            const stats = await fs.stat(fullPath);
-            console.log("Plik:", fullPath, "-", stats.size, "bajtów");
-        }
-    }
-}
-
-listDirectory(path.join(__dirname, "data")).catch((err) => {
-    console.error("Błąd:", err.message);
-});
-```
+`rmdirSync` nadaje się tylko do pustych katalogów. Do usuwania katalogu razem z zawartością używa się `rmSync` z `{ recursive: true }`. Opcja `force: true` sprawia, że brak ścieżki nie kończy programu błędem.
 
 ---
 
@@ -595,34 +576,34 @@ node notes.js "Powtórzyć moduł fs"
 Plik `notes.js`:
 
 ```javascript
-const fs = require("node:fs/promises");
-const path = require("node:path");
+const fs = require("fs");
+const path = require("path");
 
-async function main() {
-    const note = process.argv.slice(2).join(" ");
+const note = process.argv.slice(2).join(" ");
 
-    if (!note) {
-        console.log("Użycie: node notes.js \"Treść notatki\"");
-        return;
-    }
-
-    const dataDir = path.join(__dirname, "data");
-    const notesPath = path.join(dataDir, "notes.txt");
-    const line = `${new Date().toISOString()} - ${note}\n`;
-
-    await fs.mkdir(dataDir, { recursive: true });
-    await fs.appendFile(notesPath, line, "utf8");
-
-    const content = await fs.readFile(notesPath, "utf8");
-    console.log(content);
+if (!note) {
+    console.log("Użycie: node notes.js \"Treść notatki\"");
+    process.exit(0);
 }
 
-main().catch((err) => {
-    console.error("Błąd:", err.message);
-});
+const dataDir = path.join(__dirname, "data");
+const notesPath = path.join(dataDir, "notes.txt");
+const line = `${new Date().toISOString()} - ${note}\n`;
+
+try {
+    fs.mkdirSync(dataDir, { recursive: true });
+    fs.appendFileSync(notesPath, line, "utf8");
+
+    const content = fs.readFileSync(notesPath, "utf8");
+    console.log(content);
+} catch (error) {
+    console.error("Błąd:", error.message);
+}
 ```
 
-W tym przykładzie widać typowy zestaw: `path.join` do ścieżek, `mkdir` do przygotowania katalogu, `appendFile` do dopisywania oraz `readFile` do odczytu wyniku.
+`process.argv` to tablica argumentów, z którymi uruchomiono program w terminalu. Pierwsze dwa elementy to zawsze ścieżka do `node` i ścieżka do uruchamianego pliku, dlatego własne argumenty (tu: treść notatki) zaczynają się dopiero od trzeciego elementu - stąd `slice(2)`. `process.exit(0)` od razu kończy program; `0` oznacza "zakończono bez błędu".
+
+W tym przykładzie widać typowy zestaw: `path.join` do ścieżek, `mkdirSync` do przygotowania katalogu, `appendFileSync` do dopisywania oraz `readFileSync` do odczytu wyniku.
 
 ---
 
@@ -631,7 +612,7 @@ W tym przykładzie widać typowy zestaw: `path.join` do ścieżek, `mkdir` do pr
 Node.js potrafi też obserwować zmiany przez `fs.watch`. Przydaje się to np. w narzędziach developerskich, które reagują na zmianę pliku.
 
 ```javascript
-const fs = require("node:fs");
+const fs = require("fs");
 
 if (!fs.existsSync("data")) {
     fs.mkdirSync("data");
@@ -645,7 +626,7 @@ fs.watch("data", (eventType, filename) => {
 console.log("Obserwuję katalog data. Naciśnij Ctrl+C, żeby zakończyć.");
 ```
 
-`fs.watch` jest zależne od systemu operacyjnego, więc nie należy budować na nim bardzo delikatnej logiki bez dodatkowych zabezpieczeń. Na poziomie tej lekcji wystarczy wiedzieć, że taka metoda istnieje i że program będzie działał cały czas, dopóki obserwator jest aktywny.
+`fs.watch` używa callbacka, który uruchamia się po zmianie w obserwowanym katalogu. Ta metoda zależy od systemu operacyjnego, więc na tym etapie wystarczy wiedzieć, że istnieje i że program działa cały czas, dopóki obserwator jest aktywny.
 
 ---
 
@@ -656,8 +637,8 @@ Odczyt całego pliku funkcją `readFile` ma jedną wadę - Node.js musi wczytać
 **Strumień** (*stream*) pozwala przetwarzać dane kawałkami, w miarę jak są dostępne, zamiast czekać na cały plik naraz.
 
 ```javascript
-const fs = require("node:fs");
-const path = require("node:path");
+const fs = require("fs");
+const path = require("path");
 
 const sourcePath = path.join(__dirname, "duzy-plik.txt");
 const targetPath = path.join(__dirname, "kopia.txt");
@@ -667,12 +648,12 @@ const writeStream = fs.createWriteStream(targetPath);
 
 readStream.pipe(writeStream);
 
-readStream.on("error", (err) => {
-    console.error("Błąd odczytu:", err.message);
+readStream.on("error", (error) => {
+    console.error("Błąd odczytu:", error.message);
 });
 
-writeStream.on("error", (err) => {
-    console.error("Błąd zapisu:", err.message);
+writeStream.on("error", (error) => {
+    console.error("Błąd zapisu:", error.message);
 });
 
 writeStream.on("finish", () => {
@@ -682,7 +663,7 @@ writeStream.on("finish", () => {
 
 `createReadStream` otwiera plik do odczytu strumieniowego, a `createWriteStream` do zapisu. Metoda `pipe()` przekazuje dane ze strumienia odczytu do strumienia zapisu kawałek po kawałku. Zdarzenie `"finish"` na strumieniu zapisu oznacza, że dane zostały zapisane.
 
-Do zwykłego kopiowania małego pliku łatwiej użyć `copyFile`. Strumienie są szczególnie ważne przy dużych plikach, uploadzie, pobieraniu danych z sieci i obsłudze żądań HTTP. `req` i `res` w serwerze HTTP też są strumieniami.
+Do zwykłego kopiowania małego pliku łatwiej użyć `copyFileSync` albo `copyFile`. Strumienie są szczególnie ważne przy dużych plikach, uploadzie, pobieraniu danych z sieci i obsłudze żądań HTTP. `req` i `res` w serwerze HTTP też są strumieniami.
 
 ---
 
@@ -767,7 +748,17 @@ const filePath = path.join(__dirname, "data", fileName);
 
 **Zakładanie, że `writeFile` dopisuje dane.** `writeFile` nadpisuje plik. Do dopisywania na końcu służy `appendFile`.
 
-**Brak obsługi błędów asynchronicznych.** Przy `fs/promises` używaj `try/catch` albo `.catch(...)`, bo brak pliku, błędny JSON albo brak uprawnień zakończy program błędem.
+**Mieszanie stylów `fs`.**
+
+```javascript
+const fs = require("fs");
+
+fs.writeFile("app.txt", "Tekst", "utf8");
+```
+
+To jest zły zapis, bo `fs.writeFile` w stylu callbackowym wymaga funkcji callback jako ostatniego argumentu. Jeśli temat ćwiczenia jest synchroniczny, użyj `writeFileSync`. Jeśli temat ćwiczenia jest callbackowy, przekaż callback jako ostatni argument. Jeśli temat ćwiczenia jest oparty na Promise, bierz metody z `fs.promises` i użyj `await`.
+
+**Brak obsługi błędów w callbacku.** Przy metodach callbackowych zawsze sprawdzaj pierwszy argument callbacka, np. `error`.
 
 ---
 
@@ -789,8 +780,11 @@ path.resolve() / path.parse()
 fs.readFileSync / fs.writeFileSync
 → operacje synchroniczne, proste, ale blokują Event Loop
 
-fs.readFile (callback) / fs/promises
-→ operacje asynchroniczne, nie blokują Event Loop
+fs.readFile / fs.writeFile / fs.appendFile
+→ operacje asynchroniczne przez callback
+
+fs.promises.readFile / fs.promises.writeFile
+→ operacje asynchroniczne przez Promise, używane z async/await
 
 fs.appendFile / fs.copyFile / fs.rename / fs.unlink
 → dopisywanie, kopiowanie, przenoszenie i usuwanie plików
@@ -809,8 +803,9 @@ Buffer
 
 1. Stwórz plik `helpers.js` eksportujący (przez `module.exports`) dwie funkcje: `toUpperCase(text)` i `countWords(text)`. W osobnym pliku zaimportuj je przez `require` i przetestuj na dowolnym zdaniu.
 2. Napisz skrypt, który synchronicznie zapisuje do pliku `log.txt` bieżącą datę i godzinę (`new Date().toString()`), a następnie odczytuje ten plik i wypisuje jego zawartość w konsoli.
-3. Przepisz poprzedni skrypt tak, żeby korzystał z `fs/promises` i `async/await` zamiast wersji synchronicznej.
+3. Przepisz poprzedni skrypt tak, żeby korzystał z callbacków (`fs.writeFile` i `fs.readFile`) zamiast wersji synchronicznej.
 4. Napisz skrypt, który tworzy katalog `data`, zapisuje plik `config.json`, odczytuje go, parsuje przez `JSON.parse`, dopisuje nowe pole i zapisuje ponownie przez `JSON.stringify`.
 5. Napisz skrypt, który wypisuje zawartość katalogu `data` z oznaczeniem `[FILE]` albo `[DIR]`.
-6. Skopiuj dowolny plik tekstowy do nowej lokalizacji przez `fs.copyFile`, a potem zmień nazwę kopii przez `fs.rename`.
+6. Skopiuj dowolny plik tekstowy do nowej lokalizacji przez `fs.copyFileSync`, a potem zmień nazwę kopii przez `fs.renameSync`.
 7. Skopiuj dowolny większy plik tekstowy za pomocą `fs.createReadStream`, `fs.createWriteStream` i metody `pipe()`.
+8. Przepisz skrypt z zadania 2 tak, żeby korzystał z `fs.promises` i `async`/`await` zamiast wersji synchronicznej.

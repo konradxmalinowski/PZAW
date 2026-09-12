@@ -62,6 +62,8 @@ process     - informacje o procesie
 
 Za pomocą modułu `fs` można na przykład zapisać plik na dysku - coś, co w przeglądarce ze względów bezpieczeństwa jest niemożliwe.
 
+Żeby skorzystać z takiego modułu we własnym kodzie, trzeba go najpierw wczytać funkcją `require()`, podając w cudzysłowie jego nazwę, np. `require("fs")`. Wynik zwykle zapisujemy do zmiennej o tej samej nazwie co moduł - dzięki temu w dalszym kodzie mamy dostęp do wszystkich jego funkcji, np. `fs.writeFileSync(...)`. Zobaczysz to w praktyce już w przykładzie 3.
+
 | JavaScript w przeglądarce | JavaScript w Node.js |
 |---|---|
 | ma dostęp do `document`, `window` | nie ma dostępu do DOM-u |
@@ -112,7 +114,7 @@ Node.js
 Przeglądarka
 ```
 
-To jest podstawowa idea backendu - program działający cały czas, nasłuchujący na określonym porcie i odpowiadający na przychodzące żądania. Pełny przykład takiego serwera znajduje się w sekcji z kodem, przykład 9.
+To jest podstawowa idea backendu - program działający cały czas, nasłuchujący na określonym porcie i odpowiadający na przychodzące żądania. Pełny przykład takiego serwera znajduje się w sekcji z kodem, przykład 11.
 
 ---
 
@@ -155,7 +157,7 @@ Node.js nie zatrzymuje całego programu na czas oczekiwania - dalszy kod wykonuj
 
 **Kod synchroniczny** wykonuje się linia po linii - każda kolejna instrukcja czeka, aż poprzednia się zakończy.
 
-**Kod asynchroniczny** pozwala rozpocząć operację (np. odczyt pliku) i nie czekać na jej zakończenie, żeby wykonywać dalszy kod. Wynik takiej operacji dostajemy później, zwykle w funkcji zwrotnej (**callback**) albo przez `Promise`.
+**Kod asynchroniczny** pozwala rozpocząć operację (np. odczyt pliku) i nie czekać na jej zakończenie, żeby wykonywać dalszy kod. Wynik takiej operacji dostajemy później, zwykle w funkcji zwrotnej (**callback**) - czyli zwykłej funkcji, którą przekazujemy jako argument do innej funkcji, a Node.js sam ją wywoła, gdy operacja się zakończy. Innym sposobem odbierania takiego wyniku jest `Promise` - poznasz go szczegółowo w kolejnej lekcji.
 
 W Node.js większość operacji I/O - odczyt plików, zapytania sieciowe, zapytania do bazy danych - jest asynchroniczna. To jedna z podstawowych cech tego środowiska. Przykłady obu podejść znajdziesz w sekcji z kodem, przykłady 5 i 6.
 
@@ -821,6 +823,8 @@ server.listen(3000, () => {
 });
 ```
 
+`req` (od *request*) to obiekt opisujący żądanie, które przyszło od klienta (np. przeglądarki), a `res` (od *response*) to obiekt, przez który wysyłamy odpowiedź z powrotem. Szczegóły `http.createServer` i obu tych obiektów poznajesz dokładnie w kolejnej lekcji poświęconej serwerowi HTTP - tutaj wystarczy zapamiętać ogólny kształt: funkcja wywoływana dla każdego żądania, wewnątrz której ustawiamy odpowiedź.
+
 Uruchomienie:
 
 ```bash
@@ -887,7 +891,7 @@ Jeżeli uruchomimy program z dodatkowym argumentem:
 node app.js hello
 ```
 
-argument `hello` znajdzie się w tablicy `process.argv`.
+argument `hello` znajdzie się w tablicy `process.argv` - dokładniej pod indeksem `2`, bo pierwsze dwa elementy tej tablicy to zawsze ścieżka do programu `node` i ścieżka do uruchamianego pliku.
 
 ### Przykład 15: zmienne środowiskowe
 
