@@ -135,7 +135,11 @@ import { useContext } from "react";
 import UserContext from "./UserContext.jsx";
 
 function useUser() {
-    return useContext(UserContext);
+    const user = useContext(UserContext);
+    if (user === null) {
+        throw new Error("useUser musi być użyty wewnątrz UserProvider");
+    }
+    return user;
 }
 
 export default useUser;
@@ -153,7 +157,7 @@ function UserBadge() {
 }
 ```
 
-`useUser()` czyta się od razu jednoznacznie - "daj mi dane zalogowanego użytkownika" - bez zastanawiania się, z którego kontekstu i jak dokładnie go pobrać. To standardowy wzorzec w projektach React i warto się go trzymać.
+`useUser()` czyta się od razu jednoznacznie - "daj mi dane zalogowanego użytkownika" - bez zastanawiania się, z którego kontekstu i jak dokładnie go pobrać. Sprawdzenie `null` od razu pokazuje czytelny błąd, jeśli komponent zapomni o `UserProvider`, zamiast kończyć się trudnym do zrozumienia błędem przy odczycie `user.name`.
 
 ## 4. Pełniejszy przykład: użytkownik z funkcją wylogowania
 

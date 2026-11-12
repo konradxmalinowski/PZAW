@@ -39,6 +39,8 @@ Instalacja pakietów:
 npm install tailwindcss @tailwindcss/vite
 ```
 
+Dokumentacja: [Tailwind CSS z Vite](https://tailwindcss.com/docs/installation/using-vite).
+
 Dodanie pluginu w `vite.config.js`:
 
 ```javascript
@@ -133,6 +135,33 @@ Jedna kolumna na telefonie, dwie od szerokości `md` (768px) w górę, trzy od `
 ```
 
 `hover:bg-blue-600` znaczy: ta klasa włącza się tylko przy najechaniu myszą. Bazowy kolor (`bg-blue-500`) obowiązuje zawsze, `hover:` go tymczasowo nadpisuje.
+
+Nie opieraj obsługi wyłącznie na `hover`, bo użytkownik klawiatury nie najeżdża kursorem. Zachowaj widoczny fokus, a przyciskowi nadaj czytelny stan także przez `focus-visible:`:
+
+```jsx
+<button className="rounded bg-blue-700 px-4 py-2 text-white hover:bg-blue-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-900">
+    Zapisz zmiany
+</button>
+```
+
+Dobieraj kolor tekstu i tła tak, by tekst był czytelny. Znaczenie komunikatu powinno pozostać zrozumiałe również bez koloru, np. przez etykietę "Błąd" obok czerwonej ramki pola.
+
+Klasy, które mają się pojawić w gotowym CSS, zapisuj jako pełne nazwy. Tailwind skanuje pliki projektu w poszukiwaniu nazw klas, więc taki zapis może nie zostać wykryty:
+
+```javascript
+const className = `bg-${color}-500`;
+```
+
+Zamiast tego wybierz klasę z mapy pełnych nazw:
+
+```javascript
+const colorClasses = {
+    blue: "bg-blue-500",
+    red: "bg-red-500",
+};
+
+const className = colorClasses[color] ?? colorClasses.blue;
+```
 
 ## 6. Przykład: komponenty z pliku 2, ostylowane
 

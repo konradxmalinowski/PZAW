@@ -1,18 +1,20 @@
-# Routing po stronie klienta - react-router-dom
+# Routing po stronie klienta - React Router
 
-W pliku `1-vite-start.md` padło zdanie, że w SPA cały czas jesteś na tej samej stronie, a JavaScript podmienia jej zawartość. Do tej pory Twoja aplikacja miała jeden widok - `App`. Prawdziwa aplikacja ma ich zwykle kilka: stronę główną, listę produktów, szczegóły produktu, panel logowania. Ten plik pokazuje, jak przełączać się między takimi widokami bez przeładowywania strony, za pomocą biblioteki **react-router-dom**.
+W pliku `1-vite-start.md` padło zdanie, że w SPA cały czas jesteś na tej samej stronie, a JavaScript podmienia jej zawartość. Do tej pory Twoja aplikacja miała jeden widok - `App`. Prawdziwa aplikacja ma ich zwykle kilka: stronę główną, listę produktów, szczegóły produktu, panel logowania. Ten plik pokazuje, jak przełączać się między takimi widokami bez przeładowywania strony, za pomocą biblioteki React Router.
 
 ## 1. Czego dokładnie brakuje
 
 Gdybyś chciał zrobić kilka "podstron" bez żadnej biblioteki, najprostszym pomysłem byłoby trzymanie w stanie informacji "jaki widok pokazać teraz" i renderowanie go warunkowo. To by nawet zadziałało dla bardzo małej aplikacji, ale ma poważną wadę: adres w pasku przeglądarki cały czas wygląda tak samo. Nie da się wysłać komuś linku do konkretnej podstrony, przycisk "wstecz" w przeglądarce nie działa tak, jak powinien, a po odświeżeniu strony wracasz zawsze do tego samego widoku.
 
-`react-router-dom` rozwiązuje to porządnie: łączy adres URL w pasku przeglądarki z tym, który komponent jest aktualnie renderowany, a zmianę adresu obsługuje JavaScriptem, bez przeładowania całej strony.
+React Router łączy adres URL w pasku przeglądarki z komponentem, który ma być aktualnie renderowany, a zmianę adresu obsługuje bez przeładowania całej strony. W aktualnej dokumentacji trybu deklaratywnego instalujemy pakiet `react-router` i importujemy z niego komponenty oraz hooki. Starsze materiały dla wersji 6 często używają pakietu `react-router-dom`.
 
 Instalacja:
 
 ```bash
-npm install react-router-dom
+npm install react-router
 ```
+
+Dokumentacja aktualnej instalacji: [React Router, Declarative Mode](https://reactrouter.com/start/declarative/installation).
 
 ## 2. BrowserRouter, Routes i Route
 
@@ -20,7 +22,7 @@ Cały mechanizm routingu musi opakowywać aplikację, żeby wszystkie komponenty
 
 ```javascript
 import { createRoot } from "react-dom/client";
-import { BrowserRouter } from "react-router-dom";
+import { BrowserRouter } from "react-router";
 import App from "./App.jsx";
 
 createRoot(document.getElementById("root")).render(
@@ -33,7 +35,7 @@ createRoot(document.getElementById("root")).render(
 `BrowserRouter` sam w sobie niczego nie wyświetla - udostępnia tylko mechanizm routingu wszystkim komponentom wewnątrz. Konkretne trasy definiuje się w `App`, za pomocą `Routes` i `Route`:
 
 ```javascript
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route } from "react-router";
 import Home from "./pages/Home.jsx";
 import About from "./pages/About.jsx";
 import Products from "./pages/Products.jsx";
@@ -60,7 +62,7 @@ Zwykły `<a href="/about">` też zmieni adres - ale zrobi to tak, jak robił to 
 Do nawigacji wewnątrz aplikacji React służy komponent `Link`:
 
 ```javascript
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 
 function Menu() {
     return (
@@ -80,7 +82,7 @@ function Menu() {
 `NavLink` to wariant `Link` przeznaczony właśnie do menu nawigacyjnych - automatycznie wie, czy jego `to` odpowiada aktualnie aktywnej trasie, i pozwala nadać takiemu linkowi inny wygląd:
 
 ```javascript
-import { NavLink } from "react-router-dom";
+import { NavLink } from "react-router";
 
 function Menu() {
     return (
@@ -115,7 +117,7 @@ Strona ze szczegółami pojedynczego produktu nie może mieć jednej, sztywnej t
 `:id` to nazwa parametru - w miejscu tego fragmentu adresu może znaleźć się dowolna wartość, np. `/products/1` albo `/products/42`. Wewnątrz komponentu docelowego odczytujesz tę wartość hookiem `useParams`:
 
 ```javascript
-import { useParams } from "react-router-dom";
+import { useParams } from "react-router";
 
 function ProductDetails() {
     const { id } = useParams();
@@ -138,7 +140,7 @@ Sam `id` z URL-a to na razie tylko tekst - w prawdziwej aplikacji użyjesz go, �
 W pliku `3-listy-klucze.md` renderowałeś listę kart produktów. Teraz każda karta może linkować do swojej strony szczegółów, korzystając z `id` produktu:
 
 ```javascript
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 
 function ProductCard({ product }) {
     return (
@@ -166,14 +168,16 @@ Gdy użytkownik wpisze adres, który nie pasuje do żadnej zdefiniowanej trasy, 
 </Routes>
 ```
 
-`Routes` sprawdza trasy po kolei, więc `path="*"` musi być na końcu - inaczej przechwyciłby wszystko, zanim `Routes` zdążyłby dojść do bardziej konkretnych wzorców.
+W React Router `Routes` wybiera najlepiej pasującą trasę według wzorca ścieżki, a nie tylko pierwszą trasę z listy. Dlatego `path="*"` nie musi być ostatnim wpisem, choć umieszczenie go na końcu ułatwia czytanie konfiguracji.
+
+Przy wdrożeniu na serwerze trzeba też skonfigurować przekierowanie nieznanych ścieżek do `index.html`. Bez tej reguły kliknięcie linku może działać, ale odświeżenie bezpośrednio na `/products/3` może zwrócić błąd 404 z serwera, zanim React Router w ogóle się uruchomi. Szczegóły konfiguracji zależą od hostingu.
 
 ## 8. Nawigacja programowa - useNavigate
 
 Czasem trzeba przekierować użytkownika bez klikania w link - np. po poprawnym zalogowaniu albo po zapisaniu formularza. Do tego służy hook `useNavigate`:
 
 ```javascript
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 
 function LoginForm() {
     const navigate = useNavigate();
@@ -195,7 +199,7 @@ function LoginForm() {
 ```javascript
 // main.jsx
 import { createRoot } from "react-dom/client";
-import { BrowserRouter } from "react-router-dom";
+import { BrowserRouter } from "react-router";
 import App from "./App.jsx";
 
 createRoot(document.getElementById("root")).render(
@@ -207,7 +211,7 @@ createRoot(document.getElementById("root")).render(
 
 ```javascript
 // App.jsx
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route } from "react-router";
 import Menu from "./Menu.jsx";
 import Home from "./pages/Home.jsx";
 import Products from "./pages/Products.jsx";
@@ -239,7 +243,7 @@ export default App;
 
 **Brak `BrowserRouter`.** Użycie `Link`, `Route` czy `useParams` poza `BrowserRouter` kończy się błędem - te elementy muszą być renderowane gdzieś wewnątrz niego.
 
-**`path="*"` nie na końcu listy tras.** `Routes` dopasowuje trasy w kolejności - wzorzec wyłapujący wszystko musi być ostatni, inaczej przechwyci ruch, który powinien trafić do bardziej szczegółowych tras.
+**Założenie, że `path="*"` musi być ostatni.** React Router wybiera najlepiej pasującą trasę. Końcowa pozycja jest konwencją poprawiającą czytelność, a nie warunkiem działania.
 
 **Odczyt parametru bez `useParams`.** Sam fakt, że w `path` jest `:id`, nic nie daje wewnątrz komponentu - wartość trzeba jawnie odczytać przez `const { id } = useParams()`.
 
@@ -252,7 +256,7 @@ BrowserRouter
 → opakowuje całą aplikację, włącza mechanizm routingu
 
 Routes + Route
-→ definiują, jaki komponent odpowiada jakiej ścieżce
+→ definiują, jaki komponent odpowiada jakiej ścieżce; wybór zależy od dopasowania wzorca, nie kolejności wpisów
 
 Link / NavLink
 → nawigacja bez przeładowania strony
@@ -265,7 +269,7 @@ useParams()
 → odczyt parametrów z aktualnego adresu URL
 
 path="*"
-→ trasa domyślna dla nieznanego adresu (musi być na końcu)
+→ trasa domyślna dla nieznanego adresu (zwyczajowo umieszczana na końcu dla czytelności)
 
 useNavigate()
 → programowa zmiana trasy z poziomu kodu

@@ -42,7 +42,7 @@ Druga rzecz - tablica zależności - decyduje, kiedy efekt ma się uruchomić po
 
 ```text
 useEffect(fn, [])
-→ efekt uruchamia się raz, tylko po pierwszym renderze
+→ efekt jest powiązany z zamontowaniem komponentu; w Strict Mode React może wykonać dodatkowy cykl w trybie deweloperskim
 
 useEffect(fn, [id])
 → efekt uruchamia się po pierwszym renderze i za każdym razem, gdy zmieni się "id"
@@ -51,7 +51,7 @@ useEffect(fn)
 → brak tablicy w ogóle - efekt uruchamia się po KAŻDYM renderze
 ```
 
-Pusta tablica `[]` to dokładnie to, czego potrzeba do pobrania danych przy starcie komponentu - "wykonaj ten kod raz, zaraz po tym jak komponent się pojawi, i więcej się nie powtarzaj". Wariant z wartościami w tablicy (np. `[id]`) przyda się później, gdy dane trzeba pobrać ponownie po zmianie parametru (np. innego produktu) - na razie zapamiętaj, że taka opcja istnieje. Brak tablicy w ogóle prawie zawsze jest pomyłką w kontekście pobierania danych, bo prowadzi do tej samej nieskończonej pętli, co przykład z sekcji 1.
+Pusta tablica `[]` oznacza, że efekt nie zależy od zmiennych z komponentu i jest powiązany z zamontowaniem. W zwykłym przebiegu produkcyjnym efekt uruchamia się po pierwszym renderze. W trybie deweloperskim z `<StrictMode>` React może wykonać dodatkowy cykl uruchomienia i sprzątania, aby pomóc wykryć brak sprzątania. Nie opieraj poprawności aplikacji na założeniu, że żądanie sieciowe zawsze poleci dokładnie raz. Wariant z wartościami w tablicy (np. `[id]`) przyda się, gdy dane trzeba pobrać ponownie po zmianie parametru. Brak tablicy w ogóle oznacza, że efekt uruchamia się po każdym renderze i może utworzyć pętlę, jeśli zmienia stan.
 
 ## 3. fetch wewnątrz useEffect
 
@@ -94,6 +94,33 @@ useEffect(() => {
 ```
 
 Sama funkcja przekazana do `useEffect` (ta na zewnątrz) pozostaje zwykłą, synchroniczną funkcją - to `loadProducts` w środku jest `async` i to ją się wywołuje.
+
+Przy żądaniach zależnych od propsa lub stanu, komponent może zostać odmontowany albo identyfikator może się zmienić, zanim odpowiedź nadejdzie. `AbortController` pozwala anulować poprzednie żądanie podczas sprzątania efektu:
+
+```javascript
+useEffect(() => {
+    const controller = new AbortController();
+
+    async function loadProduct() {
+        try {
+            const res = await fetch(`/api/products/${id}`, {
+                signal: controller.signal
+            });
+            if (!res.ok) throw new Error("Nie udało się pobrać produktu.");
+            setProduct(await res.json());
+        } catch (err) {
+            if (err.name !== "AbortError") {
+                setError("Nie udało się pobrać produktu.");
+            }
+        }
+    }
+
+    loadProduct();
+    return () => controller.abort();
+}, [id]);
+```
+
+Funkcja zwrócona z efektu to sprzątanie. React uruchamia ją przed ponownym wykonaniem efektu dla nowego `id` oraz przy odmontowaniu komponentu. W prostym ćwiczeniu można zacząć bez anulowania żądania, ale warto znać ten wzorzec, gdy zależności efektu się zmieniają.
 
 ## 4. Stan ładowania i błędu
 
@@ -174,7 +201,31 @@ async function addProduct(product) {
 
 `method: "POST"` zmienia metodę żądania. `Content-Type: application/json` mówi backendowi, że w treści żądania jest JSON (bez tego serwer, np. Express z `express.json()`, może nie sparsować body). `JSON.stringify(product)` zamienia obiekt JavaScript na tekst - `body` żądania HTTP zawsze jest tekstem albo binarnymi danymi, nigdy gotowym obiektem JS. To jest dokładnie ten sam mechanizm, który po stronie backendu w serii Node.js odbierał `req.body`.
 
-## 6. Pełny przykład - lista produktów z formularzem dodawania
+## 6. Wysyłanie plików przez FormData
+
+Jeśli formularz zawiera plik, wyślij go jako `FormData`. Nie wywołuj `JSON.stringify()` i nie ustawiaj ręcznie nagłówka `Content-Type`: przeglądarka sama doda właściwy nagłówek `multipart/form-data` wraz z separatorem części.
+
+```javascript
+async function uploadAvatar(file) {
+    const formData = new FormData();
+    formData.append("avatar", file);
+
+    const res = await fetch("http://localhost:3000/api/avatar", {
+        method: "POST",
+        body: formData
+    });
+
+    if (!res.ok) {
+        throw new Error("Nie udało się wysłać pliku.");
+    }
+
+    return res.json();
+}
+```
+
+Nazwa `avatar` musi odpowiadać nazwie pola obsługiwanego przez backend. W serii Node.js endpoint Express korzysta zwykle z middleware takiego jak Multer, który odczytuje plik z `req.file` lub `req.files`. Sam frontend nie zapisuje pliku na serwerze; backend musi go przyjąć i zdecydować, gdzie go przechować.
+
+## 7. Pełny przykład - lista produktów z formularzem dodawania
 
 Wszystko razem: pobranie listy przy starcie, loader, obsługa błędu, renderowanie listy (`.map()` + `key` z lekcji 3) i formularz dodający nowy element przez POST:
 
@@ -273,11 +324,13 @@ Po udanym dodaniu produktu (`handleSubmit`) komponent nie pobiera całej listy o
 
 **Wysyłanie obiektu zamiast tekstu w `body`.** `body: product` nie zadziała - żądanie HTTP wymaga tekstu (albo `FormData`, jak w poprzedniej lekcji), więc obiekt trzeba najpierw zamienić przez `JSON.stringify(product)`.
 
+**Ustawianie `Content-Type` ręcznie dla `FormData`.** Przeglądarka musi dodać do nagłówka separator multipart. Przekaż sam obiekt `FormData`, bez nagłówka `Content-Type`.
+
 ## Co trzeba zapamiętać
 
 ```text
 useEffect(fn, [])
-→ uruchamia fn raz, po pierwszym renderze - miejsce na pobranie danych przy starcie
+→ uruchamia efekt po zamontowaniu; Strict Mode może wykonać dodatkowy cykl w deweloperskim trybie
 
 fetch + async wewnątrz useEffect
 → osobna funkcja async w środku, wywołana od razu - nie async bezpośrednio w useEffect
@@ -287,6 +340,9 @@ trzy stany przy pobieraniu danych
 
 POST
 → method: "POST", nagłówek Content-Type: application/json, body: JSON.stringify(dane)
+
+plik
+→ FormData z plikiem, bez ręcznego Content-Type
 
 res.ok
 → trzeba sprawdzić ręcznie - fetch nie rzuca wyjątku przy 404/500 samo z siebie

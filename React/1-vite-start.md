@@ -26,6 +26,10 @@ Nowy projekt tworzysz jednym poleceniem:
 npm create vite@latest moja-aplikacja
 ```
 
+Przed instalacją sprawdź wersję Node.js poleceniem `node -v`. Nowsze wydania Vite mają minimalne wymagania wersji Node.js; jeśli kreator lub instalacja zgłasza niezgodność, sprawdź wymagania aktualnego Vite i zaktualizuj Node.js.
+
+Dokumentacja: [Getting Started w Vite](https://vite.dev/guide/).
+
 Kreator zapyta o szablon - wybierasz **React**, a potem wariant językowy - **JavaScript** (albo TypeScript, jeśli już go znasz; w tej serii korzystamy z JavaScriptu).
 
 Po utworzeniu projektu wchodzisz do katalogu, instalujesz zależności i uruchamiasz serwer deweloperski:
@@ -155,7 +159,7 @@ return (
 );
 ```
 
-**`className` zamiast `class`.** Słowo `class` jest zarezerwowane w JavaScripcie (klasy), więc do nadawania klas CSS służy atrybut `className`:
+**`className` zamiast `class`.** W JSX klasę CSS zapisuje się standardowo atrybutem `className`. Nazwa ta odpowiada właściwości elementu DOM używanej przez React:
 
 ```javascript
 <div className="card">...</div>
@@ -228,7 +232,7 @@ Po zapisaniu pliku i przy uruchomionym `npm run dev` przeglądarka od razu poka�
 
 **Brak jednego elementu głównego.** Próba zwrócenia dwóch sąsiadujących elementów bez wspólnego opakowania (`<div>` albo Fragmentu) kończy się błędem kompilacji.
 
-**`class` zamiast `className`.** Zadziała, ale React w konsoli przeglądarki wypisze ostrzeżenie, a stylowanie może nie zadziałać tak, jak oczekujesz.
+**`class` zamiast `className`.** Używaj `className`, czyli standardowego zapisu klas CSS w JSX, aby zachować spójność z przykładami i API Reacta.
 
 **Mała litera w nazwie komponentu.** `function app() { ... }` użyty jako `<app />` zostanie potraktowany przez React jako nieznany znacznik HTML, a nie jako komponent. Nazwy komponentów zawsze zaczynasz wielką literą.
 

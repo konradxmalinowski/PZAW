@@ -28,6 +28,26 @@ function NameInput() {
 
 Jeśli dasz polu `value` bez `onChange`, przeglądarka pokaże w konsoli ostrzeżenie i pole stanie się faktycznie tylko do odczytu - użytkownik będzie mógł kliknąć w nie, ale nie wpisze nic, bo `value` cały czas jest sztywno ustawiane na tę samą wartość ze stanu, a nic jej nie aktualizuje.
 
+Pole formularza powinno mieć widoczną etykietę powiązaną z jego `id`. Placeholder nie zastępuje etykiety: znika po rozpoczęciu wpisywania, a użytkownik może też potrzebować wrócić do instrukcji.
+
+```jsx
+<label htmlFor="email">Adres e-mail</label>
+<input
+    id="email"
+    name="email"
+    type="email"
+    value={email}
+    onChange={(event) => setEmail(event.target.value)}
+/>
+```
+
+W JSX atrybut HTML `for` zapisuje się jako `htmlFor`. Dla komunikatu walidacji warto powiązać go z polem przez `aria-describedby`, a po błędzie ustawić `aria-invalid`:
+
+```jsx
+<input id="email" aria-invalid={Boolean(error)} aria-describedby="email-error" />
+<p id="email-error">{error}</p>
+```
+
 ## 2. Formularz z kilkoma polami
 
 Przy jednym polu osobny `useState` wystarczy. Przy kilku polach są dwa sensowne podejścia.

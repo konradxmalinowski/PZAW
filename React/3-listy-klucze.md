@@ -51,7 +51,7 @@ Każde wywołanie `.map()` musi **zwrócić** JSX z każdej iteracji. Zapomnieni
 
 Zauważ atrybut `key={product.id}` przy `<Card />`. To nie jest zwykły props przekazywany do komponentu - `key` React zabiera dla siebie, zanim `Card` w ogóle go zobaczy. Służy do czegoś innego niż wyświetlanie danych.
 
-Gdy lista się zmienia - dochodzi element, znika, zmienia kolejność - React musi rozpoznać, który element na ekranie odpowiada któremu elementowi w nowej tablicy, żeby zaktualizować tylko to, co faktycznie się zmieniło, a nie przerysować całej listy od zera. `key` to właśnie ten identyfikator, po którym React rozpoznaje elementy między kolejnymi renderowaniami.
+Gdy lista się zmienia - dochodzi element, znika, zmienia kolejność - React używa `key`, by powiązać elementy pomiędzy kolejnymi renderowaniami i ustalić, które należy dodać, usunąć lub zaktualizować. `key` pomaga Reactowi dopasować elementy, ale nie oznacza, że każda zmiana dotknie wyłącznie jednego węzła DOM ani że komponent nigdy nie zostanie ponownie wyrenderowany.
 
 Bez `key` React i tak coś wyrenderuje (w konsoli zobaczysz tylko ostrzeżenie), ale zacznie zgadywać dopasowania po pozycji w tablicy - a to prowadzi do błędów opisanych w sekcji "Najczęstsze błędy".
 
@@ -132,6 +132,35 @@ Gdy tablica jest pusta (np. po usunięciu wszystkich produktów), `.map()` po pr
 ```
 
 Operator warunkowy `? :` decyduje, co pokazać: komunikat o pustej liście albo wyrenderowaną tablicę kart.
+
+Listę można najpierw przefiltrować, a potem wyrenderować. `.filter()` zwraca nową tablicę, więc nie zmienia źródłowych danych:
+
+```javascript
+const availableProducts = products.filter((product) => product.inStock);
+
+return (
+    <ul>
+        {availableProducts.map((product) => (
+            <li key={product.id}>{product.title}</li>
+        ))}
+    </ul>
+);
+```
+
+Jeśli chcesz renderować kilka sąsiadujących elementów bez dodatkowego `<div>`, możesz zwrócić Fragment z kluczem:
+
+```javascript
+import { Fragment } from "react";
+
+{products.map((product) => (
+    <Fragment key={product.id}>
+        <h2>{product.title}</h2>
+        <p>{product.price} zł</p>
+    </Fragment>
+))}
+```
+
+Skrócony zapis `<>...</>` nie przyjmuje atrybutu `key`; przy mapowaniu kilku elementów użyj `<Fragment key={...}>` albo wspólnego elementu HTML.
 
 ## Najczęstsze błędy
 

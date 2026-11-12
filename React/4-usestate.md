@@ -231,6 +231,21 @@ JSX renderuje się z aktualnymi danymi
 
 Ważne jest to, że `setCount` nie zmienia wartości `count` "w miejscu", w trakcie trwania bieżącego wywołania funkcji - planuje dopiero **kolejne** wykonanie komponentu. Dlatego jeśli po `setCount(count + 1)` w tej samej funkcji spróbujesz odczytać `count`, wciąż zobaczysz starą wartość - nowa będzie dostępna dopiero przy następnym renderowaniu.
 
+## 9. Aktualizacje zależne od poprzedniego stanu
+
+Gdy nowe dane zależą od poprzedniego stanu, użyj funkcji aktualizującej. React może grupować kilka aktualizacji, a wartość zmiennej w bieżącym renderze pozostaje niezmieniona:
+
+```javascript
+setCount((previousCount) => previousCount + 1);
+setTasks((previousTasks) => [...previousTasks, newTask]);
+```
+
+To podejście jest bezpieczniejsze niż `setCount(count + 1)`, gdy w jednym zdarzeniu planujesz kilka aktualizacji albo gdy aktualizacja może zostać wykonana później. Funkcja aktualizująca powinna być czysta: oblicza nową wartość i nie zmienia poprzedniej tablicy ani obiektu.
+
+## 10. Zasady wywoływania hooków
+
+Hooki, takie jak `useState`, wywołuj na najwyższym poziomie komponentu, przed warunkami i pętlami. Nie wywołuj ich wewnątrz `if`, pętli ani funkcji obsługi kliknięcia. React dopasowuje stan do kolejności wywołań hooków podczas renderowania.
+
 ## Najczęstsze błędy
 
 **Bezpośrednia zmiana stanu.** `count = count + 1` albo `count++` nie wywoła ponownego renderowania - zawsze `setCount(...)`.
@@ -255,6 +270,12 @@ zmiana stanu
 setState(nowaWartość)
 → zapisuje nową wartość i planuje ponowne renderowanie komponentu
 → nie zmienia wartości "natychmiast" w bieżącym wykonaniu funkcji
+
+setState(previous => next)
+→ oblicza nowy stan na podstawie poprzedniego, bezpieczne przy grupowaniu aktualizacji
+
+Rules of Hooks
+→ hooki wywołuj na najwyższym poziomie komponentu, zawsze w tej samej kolejności
 
 tablice i obiekty w stanie
 → zawsze nowa kopia (spread ...), nigdy mutacja w miejscu

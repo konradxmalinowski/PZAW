@@ -207,6 +207,30 @@ export default App;
 
 `App` sam nie renderuje żadnego tekstu ani żadnej karty bezpośrednio - jego jedynym zadaniem jest ułożenie mniejszych komponentów w odpowiedniej kolejności i przekazanie im danych. Im większa aplikacja, tym ważniejszy staje się taki podział - trudno utrzymać jeden plik z tysiącem linii JSX, dużo łatwiej pracuje się na kilkunastu małych, czytelnych komponentach.
 
+Komponent może też przyjmować zawartość pomiędzy własnymi znacznikami. React przekazuje ją jako prop `children`:
+
+```javascript
+function Panel({ title, children }) {
+    return (
+        <section className="panel">
+            <h2>{title}</h2>
+            <div>{children}</div>
+        </section>
+    );
+}
+
+function App() {
+    return (
+        <Panel title="Ważna informacja">
+            <p>Zapisy kończą się w piątek.</p>
+            <p>Treść dostarczona przez rodzica.</p>
+        </Panel>
+    );
+}
+```
+
+`children` przydaje się w komponentach opakowujących, takich jak panel, karta czy układ strony. Rodzic decyduje, co umieścić w środku, a komponent opakowujący odpowiada za wspólną strukturę i wygląd.
+
 ## 7. Dobre praktyki nazewnicze
 
 Kilka zasad, których warto trzymać się od początku:
@@ -242,6 +266,9 @@ props
 
 { title, price }
 → destrukturyzacja propsów w parametrach funkcji
+
+children
+→ zawartość umieszczona pomiędzy znacznikami komponentu
 
 props są tylko do odczytu
 → komponent nigdy nie zmienia otrzymanych propsów
